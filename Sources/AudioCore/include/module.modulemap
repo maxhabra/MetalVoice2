@@ -1,0 +1,4 @@
+module AudioCore {
+    header "mv_audio.h"
+    export *
+}

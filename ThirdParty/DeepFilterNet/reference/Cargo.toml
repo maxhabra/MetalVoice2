@@ -1,0 +1,43 @@
+[package]
+name = "metalvoice-df-reference"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# Compile the unmodified upstream native inference sources with only the
+# features needed by this application (no Python, datasets, codecs, or CLI).
+[lib]
+name = "df"
+path = "../upstream/libDF/src/lib.rs"
+
+[features]
+default = ["tract", "transforms", "logging"]
+tract = []
+transforms = []
+logging = []
+timings = []
+default-model = []
+default-model-ll = []
+
+[lints.rust]
+unexpected_cfgs = { level = "allow" }
+
+[dependencies]
+rustfft = "=6.2.0"
+realfft = "=3.3.0"
+itertools = "=0.12.1"
+num-complex = { version = "0.4", features = ["serde"] }
+log = { version = "0.4", features = ["std"] }
+rubato = "=0.14.1"
+thiserror = "1.0"
+anyhow = "1.0"
+ndarray = { version = "=0.15.6", features = ["serde"] }
+crossbeam-channel = "0.5"
+rust-ini = "=0.21.0"
+tract-core = "=0.21.4"
+tract-onnx = "=0.21.4"
+tract-pulse = "=0.21.4"
+tract-hir = "=0.21.4"
+flate2 = "1.0"
+tar = "0.4"

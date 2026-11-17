@@ -1,0 +1,1319 @@
+[
+  {
+    "name": "adler",
+    "version": "1.0.2",
+    "license": "0BSD OR MIT OR Apache-2.0",
+    "repository": "https://github.com/jonas-schievink/adler.git",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jonas Schievink <jonasschievink@gmail.com>"
+    ]
+  },
+  {
+    "name": "ahash",
+    "version": "0.8.11",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tkaitchuck/ahash",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Tom Kaitchuck <Tom.Kaitchuck@gmail.com>"
+    ]
+  },
+  {
+    "name": "aho-corasick",
+    "version": "1.1.3",
+    "license": "Unlicense OR MIT",
+    "repository": "https://github.com/BurntSushi/aho-corasick",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "anyhow",
+    "version": "1.0.82",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/anyhow",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "anymap2",
+    "version": "0.13.0",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/azriel91/anymap2",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Chris Morgan <me@chrismorgan.info>",
+      "Azriel Hoh <azriel91@gmail.com>"
+    ]
+  },
+  {
+    "name": "autocfg",
+    "version": "1.3.0",
+    "license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/cuviper/autocfg",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Josh Stone <cuviper@gmail.com>"
+    ]
+  },
+  {
+    "name": "bit-set",
+    "version": "0.5.3",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/contain-rs/bit-set",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alexis Beingessner <a.beingessner@gmail.com>"
+    ]
+  },
+  {
+    "name": "bit-vec",
+    "version": "0.6.3",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/contain-rs/bit-vec",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alexis Beingessner <a.beingessner@gmail.com>"
+    ]
+  },
+  {
+    "name": "bitflags",
+    "version": "2.5.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/bitflags/bitflags",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "block-buffer",
+    "version": "0.10.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/utils",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "RustCrypto Developers"
+    ]
+  },
+  {
+    "name": "byteorder",
+    "version": "1.5.0",
+    "license": "Unlicense OR MIT",
+    "repository": "https://github.com/BurntSushi/byteorder",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "bytes",
+    "version": "1.6.0",
+    "license": "MIT",
+    "repository": "https://github.com/tokio-rs/bytes",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Carl Lerche <me@carllerche.com>",
+      "Sean McArthur <sean@seanmonstar.com>"
+    ]
+  },
+  {
+    "name": "cc",
+    "version": "1.0.96",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/cc-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alex Crichton <alex@alexcrichton.com>"
+    ]
+  },
+  {
+    "name": "cfg-if",
+    "version": "1.0.0",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/alexcrichton/cfg-if",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alex Crichton <alex@alexcrichton.com>"
+    ]
+  },
+  {
+    "name": "const-random",
+    "version": "0.1.18",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tkaitchuck/constrandom",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Tom Kaitchuck <Tom.Kaitchuck@gmail.com>"
+    ]
+  },
+  {
+    "name": "const-random-macro",
+    "version": "0.1.16",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/tkaitchuck/constrandom",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Tom Kaitchuck <Tom.Kaitchuck@gmail.com>"
+    ]
+  },
+  {
+    "name": "cpufeatures",
+    "version": "0.2.12",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/utils",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "RustCrypto Developers"
+    ]
+  },
+  {
+    "name": "crc32fast",
+    "version": "1.4.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/srijs/rust-crc32fast",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Sam Rijs <srijs@airpost.net>",
+      "Alex Crichton <alex@alexcrichton.com>"
+    ]
+  },
+  {
+    "name": "crossbeam-channel",
+    "version": "0.5.12",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/crossbeam-rs/crossbeam",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": []
+  },
+  {
+    "name": "crossbeam-utils",
+    "version": "0.8.19",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/crossbeam-rs/crossbeam",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": []
+  },
+  {
+    "name": "crunchy",
+    "version": "0.2.2",
+    "license": "MIT",
+    "repository": null,
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Vurich <jackefransham@hotmail.co.uk>"
+    ]
+  },
+  {
+    "name": "crypto-common",
+    "version": "0.1.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/traits",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "RustCrypto Developers"
+    ]
+  },
+  {
+    "name": "deranged",
+    "version": "0.3.11",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/jhpratt/deranged",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jacob Pratt <jacob@jhpratt.dev>"
+    ]
+  },
+  {
+    "name": "derive-new",
+    "version": "0.5.9",
+    "license": "MIT",
+    "repository": "https://github.com/nrc/derive-new",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Nick Cameron <ncameron@mozilla.com>"
+    ]
+  },
+  {
+    "name": "digest",
+    "version": "0.10.7",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/traits",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "RustCrypto Developers"
+    ]
+  },
+  {
+    "name": "dlv-list",
+    "version": "0.5.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/sgodwincs/dlv-list-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Scott Godwin <sgodwincs@gmail.com>"
+    ]
+  },
+  {
+    "name": "doc-comment",
+    "version": "0.3.3",
+    "license": "MIT",
+    "repository": "https://github.com/GuillaumeGomez/doc-comment",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Guillaume Gomez <guillaume1.gomez@gmail.com>"
+    ]
+  },
+  {
+    "name": "downcast-rs",
+    "version": "1.2.1",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/marcianx/downcast-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Ashish Myles <marcianx@gmail.com>",
+      "Runji Wang <wangrunji0408@163.com>"
+    ]
+  },
+  {
+    "name": "dyn-clone",
+    "version": "1.0.17",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/dyn-clone",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "either",
+    "version": "1.11.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rayon-rs/either",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "bluss"
+    ]
+  },
+  {
+    "name": "errno",
+    "version": "0.3.8",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/lambda-fairy/rust-errno",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Chris Wong <lambda.fairy@gmail.com>"
+    ]
+  },
+  {
+    "name": "filetime",
+    "version": "0.2.23",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/alexcrichton/filetime",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alex Crichton <alex@alexcrichton.com>"
+    ]
+  },
+  {
+    "name": "flate2",
+    "version": "1.0.30",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/flate2-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alex Crichton <alex@alexcrichton.com>",
+      "Josh Triplett <josh@joshtriplett.org>"
+    ]
+  },
+  {
+    "name": "generic-array",
+    "version": "0.14.7",
+    "license": "MIT",
+    "repository": "https://github.com/fizyk20/generic-array.git",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Bart\u0142omiej Kami\u0144ski <fizyk20@gmail.com>",
+      "Aaron Trent <novacrazy@gmail.com>"
+    ]
+  },
+  {
+    "name": "getrandom",
+    "version": "0.2.14",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/getrandom",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rand Project Developers"
+    ]
+  },
+  {
+    "name": "half",
+    "version": "2.4.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/starkat99/half-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Kathryn Long <squeeself@gmail.com>"
+    ]
+  },
+  {
+    "name": "hashbrown",
+    "version": "0.14.5",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/hashbrown",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Amanieu d'Antras <amanieu@gmail.com>"
+    ]
+  },
+  {
+    "name": "itertools",
+    "version": "0.10.5",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/rust-itertools/itertools",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "bluss"
+    ]
+  },
+  {
+    "name": "itertools",
+    "version": "0.12.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-itertools/itertools",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "bluss"
+    ]
+  },
+  {
+    "name": "itoa",
+    "version": "1.0.11",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/itoa",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "kstring",
+    "version": "2.0.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/cobalt-org/kstring",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Ed Page <eopage@gmail.com>"
+    ]
+  },
+  {
+    "name": "lazy_static",
+    "version": "1.4.0",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/rust-lang-nursery/lazy-static.rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Marvin L\u00f6bel <loebel.marvin@gmail.com>"
+    ]
+  },
+  {
+    "name": "libc",
+    "version": "0.2.154",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/libc",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "libm",
+    "version": "0.2.8",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/libm",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jorge Aparicio <jorge@japaric.io>"
+    ]
+  },
+  {
+    "name": "liquid",
+    "version": "0.26.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/cobalt-org/liquid-rust",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": []
+  },
+  {
+    "name": "liquid-core",
+    "version": "0.26.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/cobalt-org/liquid-rust/tree/master/crate/core",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Ed Page <eopage@gmail.com>"
+    ]
+  },
+  {
+    "name": "liquid-derive",
+    "version": "0.26.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/cobalt-org/liquid-rust",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Pedro Gon\u00e7alo Correia <goncalerta@gmail.com>"
+    ]
+  },
+  {
+    "name": "liquid-lib",
+    "version": "0.26.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/cobalt-org/liquid-rust/tree/master/liquid-lib",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Johann Hofmann <mail@johann-hofmann.com>"
+    ]
+  },
+  {
+    "name": "log",
+    "version": "0.4.21",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/log",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "maplit",
+    "version": "1.0.2",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/bluss/maplit",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "bluss"
+    ]
+  },
+  {
+    "name": "matrixmultiply",
+    "version": "0.3.8",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/bluss/matrixmultiply/",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "bluss",
+      "R. Janis Goldschmidt"
+    ]
+  },
+  {
+    "name": "memchr",
+    "version": "2.7.2",
+    "license": "Unlicense OR MIT",
+    "repository": "https://github.com/BurntSushi/memchr",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Andrew Gallant <jamslam@gmail.com>",
+      "bluss"
+    ]
+  },
+  {
+    "name": "memmap2",
+    "version": "0.9.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RazrFalcon/memmap2-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Dan Burkert <dan@danburkert.com>",
+      "Yevhenii Reizner <razrfalcon@gmail.com>"
+    ]
+  },
+  {
+    "name": "minimal-lexical",
+    "version": "0.2.1",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/Alexhuszagh/minimal-lexical",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alex Huszagh <ahuszagh@gmail.com>"
+    ]
+  },
+  {
+    "name": "miniz_oxide",
+    "version": "0.7.2",
+    "license": "MIT OR Zlib OR Apache-2.0",
+    "repository": "https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Frommi <daniil.liferenko@gmail.com>",
+      "oyvindln <oyvindln@users.noreply.github.com>"
+    ]
+  },
+  {
+    "name": "ndarray",
+    "version": "0.15.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-ndarray/ndarray",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Ulrik Sverdrup \"bluss\"",
+      "Jim Turner"
+    ]
+  },
+  {
+    "name": "nom",
+    "version": "7.1.3",
+    "license": "MIT",
+    "repository": "https://github.com/Geal/nom",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "contact@geoffroycouprie.com"
+    ]
+  },
+  {
+    "name": "num-complex",
+    "version": "0.4.5",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-num/num-complex",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "num-conv",
+    "version": "0.1.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/jhpratt/num-conv",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jacob Pratt <jacob@jhpratt.dev>"
+    ]
+  },
+  {
+    "name": "num-integer",
+    "version": "0.1.46",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-num/num-integer",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "num-traits",
+    "version": "0.2.19",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-num/num-traits",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "once_cell",
+    "version": "1.19.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/matklad/once_cell",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Aleksey Kladov <aleksey.kladov@gmail.com>"
+    ]
+  },
+  {
+    "name": "ordered-multimap",
+    "version": "0.7.3",
+    "license": "MIT",
+    "repository": "https://github.com/sgodwincs/ordered-multimap-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Scott Godwin <sgodwincs@gmail.com>"
+    ]
+  },
+  {
+    "name": "paste",
+    "version": "1.0.14",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/paste",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "percent-encoding",
+    "version": "2.3.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/servo/rust-url/",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The rust-url developers"
+    ]
+  },
+  {
+    "name": "pest",
+    "version": "2.7.10",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/pest-parser/pest",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Drago\u0219 Tiselice <dragostiselice@gmail.com>"
+    ]
+  },
+  {
+    "name": "pest_derive",
+    "version": "2.7.10",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/pest-parser/pest",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Drago\u0219 Tiselice <dragostiselice@gmail.com>"
+    ]
+  },
+  {
+    "name": "pest_generator",
+    "version": "2.7.10",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/pest-parser/pest",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Drago\u0219 Tiselice <dragostiselice@gmail.com>"
+    ]
+  },
+  {
+    "name": "pest_meta",
+    "version": "2.7.10",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/pest-parser/pest",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Drago\u0219 Tiselice <dragostiselice@gmail.com>"
+    ]
+  },
+  {
+    "name": "powerfmt",
+    "version": "0.2.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/jhpratt/powerfmt",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jacob Pratt <jacob@jhpratt.dev>"
+    ]
+  },
+  {
+    "name": "ppv-lite86",
+    "version": "0.2.17",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/cryptocorrosion/cryptocorrosion",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The CryptoCorrosion Contributors"
+    ]
+  },
+  {
+    "name": "primal-check",
+    "version": "0.3.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/huonw/primal",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Huon Wilson <dbau.pp@gmail.com>"
+    ]
+  },
+  {
+    "name": "proc-macro2",
+    "version": "1.0.81",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/proc-macro2",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>",
+      "Alex Crichton <alex@alexcrichton.com>"
+    ]
+  },
+  {
+    "name": "prost",
+    "version": "0.11.9",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/tokio-rs/prost",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Dan Burkert <dan@danburkert.com>",
+      "Lucio Franco <luciofranco14@gmail.com",
+      "Tokio Contributors <team@tokio.rs>"
+    ]
+  },
+  {
+    "name": "prost-derive",
+    "version": "0.11.9",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/tokio-rs/prost",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Dan Burkert <dan@danburkert.com>",
+      "Lucio Franco <luciofranco14@gmail.com>",
+      "Tokio Contributors <team@tokio.rs>"
+    ]
+  },
+  {
+    "name": "quote",
+    "version": "1.0.36",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/quote",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "rand",
+    "version": "0.8.5",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/rand",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rand Project Developers",
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "rand_chacha",
+    "version": "0.3.1",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/rand",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rand Project Developers",
+      "The Rust Project Developers",
+      "The CryptoCorrosion Contributors"
+    ]
+  },
+  {
+    "name": "rand_core",
+    "version": "0.6.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/rand",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rand Project Developers",
+      "The Rust Project Developers"
+    ]
+  },
+  {
+    "name": "rand_distr",
+    "version": "0.4.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-random/rand",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rand Project Developers"
+    ]
+  },
+  {
+    "name": "rawpointer",
+    "version": "0.2.1",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/bluss/rawpointer/",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "bluss"
+    ]
+  },
+  {
+    "name": "realfft",
+    "version": "3.3.0",
+    "license": "MIT",
+    "repository": "https://github.com/HEnquist/realfft",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "HEnquist <henrik.enquist@gmail.com>"
+    ]
+  },
+  {
+    "name": "regex",
+    "version": "1.10.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/regex",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers",
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "regex-automata",
+    "version": "0.4.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/regex/tree/master/regex-automata",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers",
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "regex-syntax",
+    "version": "0.8.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/rust-lang/regex/tree/master/regex-syntax",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Rust Project Developers",
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "rubato",
+    "version": "0.14.1",
+    "license": "MIT",
+    "repository": "https://github.com/HEnquist/rubato",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "HEnquist <henrik.enquist@gmail.com>"
+    ]
+  },
+  {
+    "name": "rust-ini",
+    "version": "0.21.0",
+    "license": "MIT",
+    "repository": "https://github.com/zonyitoo/rust-ini",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Y. T. Chung <zonyitoo@gmail.com>"
+    ]
+  },
+  {
+    "name": "rustfft",
+    "version": "6.2.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/ejmahler/RustFFT",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Allen Welkie <allen.welkie at gmail>",
+      "Elliott Mahler <join.together at gmail>"
+    ]
+  },
+  {
+    "name": "rustix",
+    "version": "0.38.34",
+    "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+    "repository": "https://github.com/bytecodealliance/rustix",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Dan Gohman <dev@sunfishcode.online>",
+      "Jakub Konka <kubkon@jakubkonka.com>"
+    ]
+  },
+  {
+    "name": "same-file",
+    "version": "1.0.6",
+    "license": "Unlicense/MIT",
+    "repository": "https://github.com/BurntSushi/same-file",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "scan_fmt",
+    "version": "0.2.6",
+    "license": "MIT",
+    "repository": "https://github.com/wlentz/scan_fmt",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "wlentz"
+    ]
+  },
+  {
+    "name": "serde",
+    "version": "1.0.200",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/serde-rs/serde",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "serde_derive",
+    "version": "1.0.200",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/serde-rs/serde",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "sha2",
+    "version": "0.10.8",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/hashes",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "RustCrypto Developers"
+    ]
+  },
+  {
+    "name": "smallvec",
+    "version": "1.13.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/servo/rust-smallvec",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "The Servo Project Developers"
+    ]
+  },
+  {
+    "name": "static_assertions",
+    "version": "1.1.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/nvzqz/static-assertions-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Nikolai Vazquez"
+    ]
+  },
+  {
+    "name": "strength_reduce",
+    "version": "0.2.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "http://github.com/ejmahler/strength_reduce",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Elliott Mahler <join.together@gmail.com>"
+    ]
+  },
+  {
+    "name": "string-interner",
+    "version": "0.15.0",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/robbepop/string-interner",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Robbepop"
+    ]
+  },
+  {
+    "name": "syn",
+    "version": "1.0.109",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/syn",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "syn",
+    "version": "2.0.60",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/syn",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "tar",
+    "version": "0.4.40",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/alexcrichton/tar-rs",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Alex Crichton <alex@alexcrichton.com>"
+    ]
+  },
+  {
+    "name": "thiserror",
+    "version": "1.0.59",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/thiserror",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "thiserror-impl",
+    "version": "1.0.59",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/dtolnay/thiserror",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "time",
+    "version": "0.3.36",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/time-rs/time",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jacob Pratt <open-source@jhpratt.dev>",
+      "Time contributors"
+    ]
+  },
+  {
+    "name": "time-core",
+    "version": "0.1.2",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/time-rs/time",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jacob Pratt <open-source@jhpratt.dev>",
+      "Time contributors"
+    ]
+  },
+  {
+    "name": "time-macros",
+    "version": "0.2.18",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/time-rs/time",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Jacob Pratt <open-source@jhpratt.dev>",
+      "Time contributors"
+    ]
+  },
+  {
+    "name": "tiny-keccak",
+    "version": "2.0.2",
+    "license": "CC0-1.0",
+    "repository": null,
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "debris <marek.kotewicz@gmail.com>"
+    ]
+  },
+  {
+    "name": "tinyvec",
+    "version": "1.6.0",
+    "license": "Zlib OR Apache-2.0 OR MIT",
+    "repository": "https://github.com/Lokathor/tinyvec",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Lokathor <zefria@gmail.com>"
+    ]
+  },
+  {
+    "name": "tinyvec_macros",
+    "version": "0.1.1",
+    "license": "MIT OR Apache-2.0 OR Zlib",
+    "repository": "https://github.com/Soveu/tinyvec_macros",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Soveu <marx.tomasz@gmail.com>"
+    ]
+  },
+  {
+    "name": "tract-core",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-data",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-hir",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-linalg",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-nnef",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-onnx",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-onnx-opl",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-pulse",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "tract-pulse-opl",
+    "version": "0.21.4",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/snipsco/tract",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Mathieu Poumeyrol <kali@zoy.org>"
+    ]
+  },
+  {
+    "name": "transpose",
+    "version": "0.2.3",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/ejmahler/transpose",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Elliott Mahler <join.together@gmail.com>"
+    ]
+  },
+  {
+    "name": "trim-in-place",
+    "version": "0.1.7",
+    "license": "MIT",
+    "repository": "https://github.com/magiclen/trim-in-place",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Magic Len <len@magiclen.org>"
+    ]
+  },
+  {
+    "name": "typenum",
+    "version": "1.17.0",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/paholg/typenum",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Paho Lurie-Gregg <paho@paholg.com>",
+      "Andre Bogus <bogusandre@gmail.com>"
+    ]
+  },
+  {
+    "name": "ucd-trie",
+    "version": "0.1.6",
+    "license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/BurntSushi/ucd-generate",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "unicode-ident",
+    "version": "1.0.12",
+    "license": "(MIT OR Apache-2.0) AND Unicode-DFS-2016",
+    "repository": "https://github.com/dtolnay/unicode-ident",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "David Tolnay <dtolnay@gmail.com>"
+    ]
+  },
+  {
+    "name": "unicode-normalization",
+    "version": "0.1.23",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/unicode-rs/unicode-normalization",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "kwantam <kwantam@gmail.com>",
+      "Manish Goregaokar <manishsmail@gmail.com>"
+    ]
+  },
+  {
+    "name": "unicode-segmentation",
+    "version": "1.11.0",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/unicode-rs/unicode-segmentation",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "kwantam <kwantam@gmail.com>",
+      "Manish Goregaokar <manishsmail@gmail.com>"
+    ]
+  },
+  {
+    "name": "version_check",
+    "version": "0.9.4",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/SergioBenitez/version_check",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Sergio Benitez <sb@sergio.bz>"
+    ]
+  },
+  {
+    "name": "walkdir",
+    "version": "2.5.0",
+    "license": "Unlicense/MIT",
+    "repository": "https://github.com/BurntSushi/walkdir",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Andrew Gallant <jamslam@gmail.com>"
+    ]
+  },
+  {
+    "name": "xattr",
+    "version": "1.3.1",
+    "license": "MIT/Apache-2.0",
+    "repository": "https://github.com/Stebalien/xattr",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Steven Allen <steven@stebalien.com>"
+    ]
+  },
+  {
+    "name": "zerocopy",
+    "version": "0.7.33",
+    "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
+    "repository": "https://github.com/google/zerocopy",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "authors": [
+      "Joshua Liebow-Feeser <joshlf@google.com>"
+    ]
+  }
+]

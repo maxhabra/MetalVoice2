@@ -1,0 +1,97 @@
+{
+  "state_size": 26304,
+  "states": [
+    {
+      "name": "enc_erb_conv0_0_Pad",
+      "shape": [
+        1,
+        1,
+        2,
+        32
+      ],
+      "offset": 0,
+      "count": 64
+    },
+    {
+      "name": "enc_df_conv0_0_Pad",
+      "shape": [
+        1,
+        2,
+        2,
+        96
+      ],
+      "offset": 64,
+      "count": 384
+    },
+    {
+      "name": "enc_emb_gru_GRU",
+      "shape": [
+        1,
+        256
+      ],
+      "offset": 448,
+      "count": 256
+    },
+    {
+      "name": "erb_emb_gru_GRU",
+      "shape": [
+        1,
+        256
+      ],
+      "offset": 704,
+      "count": 256
+    },
+    {
+      "name": "erb_emb_gru_GRU_1",
+      "shape": [
+        1,
+        256
+      ],
+      "offset": 960,
+      "count": 256
+    },
+    {
+      "name": "df_df_gru_gru_GRU",
+      "shape": [
+        1,
+        256
+      ],
+      "offset": 1216,
+      "count": 256
+    },
+    {
+      "name": "df_df_gru_gru_GRU_1",
+      "shape": [
+        1,
+        256
+      ],
+      "offset": 1472,
+      "count": 256
+    },
+    {
+      "name": "df_df_convp_df_convp_0_Pad",
+      "shape": [
+        1,
+        64,
+        4,
+        96
+      ],
+      "offset": 1728,
+      "count": 24576
+    }
+  ],
+  "stateful": false,
+  "separate": false,
+  "fp16": false,
+  "mixed": false,
+  "conditional": true,
+  "skip_inactive": true,
+  "source_sha256": "c94d91f70911001c946e0fabb4aa9adc37045f45a03b56008cb0c8244cb63616",
+  "coremltools": "8.3.0",
+  "files": {
+    "Resources/DeepFilterNet3.mlpackage/Data/com.apple.CoreML/model.mlmodel": "69f4d92cd609053fbe923c27ef4a31228caa90b05b6984e353dca83f9e87e80e",
+    "Resources/DeepFilterNet3.mlpackage/Data/com.apple.CoreML/weights/weight.bin": "846acc0acb3378b442cbb0bdb058938df2c138273bbe36e3068457db2683064b",
+    "Resources/DeepFilterNet3.mlpackage/Manifest.json": "cc373a09bbbaac68088ab5d153fc5df5b0c8924b5fe90baf53d427e8fc4a47a1",
+    "scripts/export_deepfilter_coreml.py": "4eaf3d74c09f1b494f5fcf8fc1b34cdbca29c6641dd0dd9a9100c10ea8bde1d6"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/fgnt/nara_wpe",
+  "commit": "5fbfc3639274e5a70dffcf08e20615a38c372ebb",
+  "files": {
+    "LICENSE": "f9fad5befd31a5c5540fb671fa56efd59d959959ffe1b6a8156a66549d6410f0",
+    "wpe.py": "385a6f1c67071ba3e243c8a24fe4a041484c55280ad4ed0dbadefa4679a606d2"
+  }
+}

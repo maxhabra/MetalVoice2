@@ -1,0 +1,14 @@
+{
+  "reference": "NARA-WPE online_wpe_step + independent NumPy STFT/mask",
+  "upstreamCommit": "5fbfc3639274e5a70dffcf08e20615a38c372ebb",
+  "sourceSHA256": "385a6f1c67071ba3e243c8a24fe4a041484c55280ad4ed0dbadefa4679a606d2",
+  "baseSHA256": "67824da12292087a06a906fa710c7741998d08f36491727c25e62015285b93ad",
+  "sampleRate": 48000,
+  "delaySamples": 480,
+  "samples": 264480,
+  "generator": "scripts/generate_room_fixture.py",
+  "files": {
+    "RoomDereverb.input.f32": "aada0c9d238e34045f8676a49c13bc77b47a3cb46f3aebfe88ceaa462ee36613",
+    "RoomDereverb.reference.f32": "f373b1c5c633d94838db79f0c44b42c00f35019661556631b42cfdd93c94505f"
+  }
+}

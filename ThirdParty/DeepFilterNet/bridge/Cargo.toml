@@ -1,0 +1,23 @@
+[package]
+name = "metalvoice-df"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "metalvoice_df"
+crate-type = ["staticlib", "rlib"]
+
+[workspace]
+
+[dependencies]
+df = { package = "metalvoice-df-reference", path = "../reference" }
+ndarray = "=0.15.6"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
+# Keep unwinding enabled so no Rust panic can cross the C ABI.
+panic = "unwind"

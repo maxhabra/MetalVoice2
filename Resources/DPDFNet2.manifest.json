@@ -1,0 +1,18 @@
+{
+  "model": "dpdfnet2_48khz_hr",
+  "sample_rate": 48000,
+  "hop": 480,
+  "delay_samples": 2400,
+  "state_size": 56436,
+  "precision": "Float32",
+  "fused_gru": true,
+  "unrolled_gru": true,
+  "files": {
+    "Resources/DPDFNet2.mlpackage/Data/com.apple.CoreML/model.mlmodel": "b7296a82cb5fbb83761245d249eee221281504ebe6be9f209031e777bcff4cef",
+    "Resources/DPDFNet2.mlpackage/Data/com.apple.CoreML/weights/weight.bin": "1a861fd0958f4c3901eb21bbcc4822474f0e856b1dd0222d94192b6ff82dbf46",
+    "Resources/DPDFNet2.mlpackage/Manifest.json": "e87fceae4a55f3054119361d93e4c8af7406b6eedf65f61fafe148ea11133b70",
+    "Resources/DPDFNet2.state.f32": "e49ca8cda6e2bb5f86d993954280e73a5cd4fdcf6abd08e059fd04bbce80b7b9",
+    "ThirdParty/DPDFNet/SOURCE_MANIFEST.json": "d36fa0ac0235fb76e98258fa8814a4f3906377e3e0aa28de099179b657f3c0a3",
+    "scripts/export_dpdfnet_coreml.py": "f1fb20872dcf8ec91cf72564c01bbb36ebe59942c85d14e4e5bea21c0c3714a5"
+  }
+}

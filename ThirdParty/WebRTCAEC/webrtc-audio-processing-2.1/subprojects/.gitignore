@@ -1,0 +1,4 @@
+# MetalVoice2 vendors the pinned, Meson-patched Abseil source for offline builds.
+!abseil-cpp-20240722.0/
+packagecache/
+.wraplock

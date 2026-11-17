@@ -1,0 +1,11 @@
+{
+  "sample_rate": 48000,
+  "format": "little-endian mono float32",
+  "seconds": 5,
+  "source": "macOS generated speech plus seeded noise; no microphone recording",
+  "reference": "Official pinned ONNX model, numpy causal STFT and overlap-add; scripts/check_dpdfnet_reference.py",
+  "files": {
+    "DPDFNet2.input.f32": "67824da12292087a06a906fa710c7741998d08f36491727c25e62015285b93ad",
+    "DPDFNet2.reference.f32": "7554141f073aac9031555b566189c7978cece47492e56fe33517e28e36dffa1b"
+  }
+}

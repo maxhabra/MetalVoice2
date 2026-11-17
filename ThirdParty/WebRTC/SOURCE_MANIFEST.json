@@ -1,0 +1,163 @@
+{
+  "repository": "https://github.com/webrtc-mirror/webrtc",
+  "revision": "3710345e71ad3a7c1f4ed4efef152fd4fc24869a",
+  "retrieved": "2026-11-17",
+  "files": [
+    {
+      "path": "upstream/modules/audio_processing/ns/fast_math.h",
+      "gitBlobSHA1": "598b31cfd784c1f46aec3cdc337188c725392a4c"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/fast_math.cc",
+      "gitBlobSHA1": "7d5225220159249e98872d87d2a9cdbc73d8a5df"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/histograms.h",
+      "gitBlobSHA1": "3f4445486b320a065b3340e1a37c11bf616d2792"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/histograms.cc",
+      "gitBlobSHA1": "1161ce8b79a1234425c7c837aee0f055aa5bdb91"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/noise_estimator.h",
+      "gitBlobSHA1": "2ae89d5ed3275eb0048b7fdd80a0d59a3bf5d86e"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/noise_estimator.cc",
+      "gitBlobSHA1": "00b647ca3540f36da2c3eeee8626a6407749f9c6"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/noise_suppressor.h",
+      "gitBlobSHA1": "59312ef0fb5ec26969f28398b2efa0ddb6bbcee6"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/noise_suppressor.cc",
+      "gitBlobSHA1": "47030c2acdfcdb4dc57eb4c9b95351b543a011bf"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/ns_common.h",
+      "gitBlobSHA1": "d6149f72a78383b9efb18160cf4cc4b36e77770a"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/ns_config.h",
+      "gitBlobSHA1": "0a285e9ceaa2830830d23b85944adf4286364cf6"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/ns_fft.h",
+      "gitBlobSHA1": "78872512da0e90e76fdf755d48e71be7e9b230c8"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/ns_fft.cc",
+      "gitBlobSHA1": "07e63739aa4cda52d585b99edc2369de96ce6ca4"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/prior_signal_model.h",
+      "gitBlobSHA1": "dcfa7ea709abaef93390dc86abb32ad582a17e6f"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/prior_signal_model.cc",
+      "gitBlobSHA1": "f25a1e2060273624075ac033b83d819063ca3b19"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/prior_signal_model_estimator.h",
+      "gitBlobSHA1": "d178323dbab844cc7435a1725ce797284eebf38d"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/prior_signal_model_estimator.cc",
+      "gitBlobSHA1": "f4017645540cb1d62d20abbe8fc1f53e3102407f"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/quantile_noise_estimator.h",
+      "gitBlobSHA1": "79a1b3e1ccc548be9869f843827e37c2ee2c827a"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/quantile_noise_estimator.cc",
+      "gitBlobSHA1": "fec852b531f9381f0002474a703602b3e32e9e4f"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/signal_model.h",
+      "gitBlobSHA1": "6614d38a384cf1ed72bf13a0f8804eafe9695740"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/signal_model.cc",
+      "gitBlobSHA1": "38b2637efeef80c52dfc080b1adc27435a86a4b0"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/signal_model_estimator.h",
+      "gitBlobSHA1": "540e4786615313a55eb82d452f4b5f4395f34691"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/signal_model_estimator.cc",
+      "gitBlobSHA1": "84f175f71f86319e4649d41b2755456abadbaccd"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/speech_probability_estimator.h",
+      "gitBlobSHA1": "8651e8a883e0c8a73c053c5d460abcef2b866e58"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/speech_probability_estimator.cc",
+      "gitBlobSHA1": "0f7369382fcb97c09f656bfe41b247d5b459824c"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/suppression_params.h",
+      "gitBlobSHA1": "ad11977d81c7ef01f6462c1853dc77c3127d9a12"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/suppression_params.cc",
+      "gitBlobSHA1": "fd467df56d1f52aad99ddd88405750e923722c31"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/wiener_filter.h",
+      "gitBlobSHA1": "d34cd56e1585404b267ae7b0ccf04157c8ec5e5e"
+    },
+    {
+      "path": "upstream/modules/audio_processing/ns/wiener_filter.cc",
+      "gitBlobSHA1": "ff8ec4d6382b1b343b1c37cc582b9fe90f11e909"
+    },
+    {
+      "path": "upstream/LICENSE",
+      "gitBlobSHA1": "4c41b7b251e2f7606c70fad48eb92c8a2bc8e357"
+    },
+    {
+      "path": "upstream/PATENTS",
+      "gitBlobSHA1": "190607ac2619bcb28f5c3af61a2fda3953364f7c"
+    },
+    {
+      "path": "upstream/AUTHORS",
+      "gitBlobSHA1": "8b8798fe84b19cc3a2f5be5c1c15e07d42ff89e6"
+    },
+    {
+      "path": "upstream/rtc_base/type_traits.h",
+      "gitBlobSHA1": "fccaf337189c5ac265b0dbfd482761c931e72a64"
+    },
+    {
+      "path": "upstream/common_audio/third_party/ooura/LICENSE",
+      "gitBlobSHA1": "3bf870aa3cc19a30d1689a34e4d147cfcd14a384"
+    },
+    {
+      "path": "upstream/common_audio/third_party/ooura/README.chromium",
+      "gitBlobSHA1": "21a14efab613c91054ca2f4503603039166493f4"
+    },
+    {
+      "path": "upstream/api/array_view.h",
+      "gitBlobSHA1": "e8f4cf4ae2f32203f0d17d3af47037b4abdcaa9d"
+    },
+    {
+      "path": "upstream/modules/audio_processing/three_band_filter_bank.h",
+      "gitBlobSHA1": "84feb39d0744bae19b22747fa22ddf0d70d28063"
+    },
+    {
+      "path": "upstream/modules/audio_processing/three_band_filter_bank.cc",
+      "gitBlobSHA1": "a04852a4c7fe3d6ec474d5ee9c8481893c046082"
+    },
+    {
+      "path": "upstream/common_audio/third_party/ooura/fft_size_256/fft4g.h",
+      "gitBlobSHA1": "5a465a354525c2c6bd4228a7fabae3c2bd4d33ef"
+    },
+    {
+      "path": "upstream/common_audio/third_party/ooura/fft_size_256/fft4g.cc",
+      "gitBlobSHA1": "f8f91f306bcaa50cb2dabffe6ea32c97540d988c"
+    }
+  ]
+}

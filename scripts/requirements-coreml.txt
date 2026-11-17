@@ -1,0 +1,5 @@
+# Optional model regeneration and upstream ONNX validation; never shipped.
+coremltools==8.3.0
+onnx==1.17.0
+numpy==1.26.4
+onnxruntime==1.19.2

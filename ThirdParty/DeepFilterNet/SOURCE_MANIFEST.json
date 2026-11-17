@@ -1,0 +1,123 @@
+{
+  "repository": "https://github.com/Rikorose/DeepFilterNet",
+  "commit": "7b14b895fe7fc42cab72b4a4c1e49c982bd6404b",
+  "sourceArchiveSHA256": "60ddfcd8a4b62b78e95c59707a9c9bd6df74f09d72db41abad8987c67f2a680a",
+  "model": "DeepFilterNet3_onnx.tar.gz",
+  "files": [
+    {
+      "path": "upstream/README.md",
+      "sha256": "f69b5cf0b747a0b805655a17275039455c1f041011a12ae6aa8126b11dcb80d0",
+      "gitBlobSHA1": "ebbeefba153ea0636b8484b1bd37e989514ca72f"
+    },
+    {
+      "path": "upstream/LICENSE",
+      "sha256": "f7ef673bf046d823dcd775bdd0768432bd8855f81d0e5e1290a0a48c42e2dca3",
+      "gitBlobSHA1": "09250ca89f273c2eae410e7e7756c9ff7589ca02"
+    },
+    {
+      "path": "upstream/LICENSE-MIT",
+      "sha256": "24e6bb09c928af8d8e56268082f87413247ce36b39dd5d33add2f9893968065e",
+      "gitBlobSHA1": "16974dce46da311c7fd8d30f04362ca0ad03a8ca"
+    },
+    {
+      "path": "upstream/LICENSE-APACHE",
+      "sha256": "1eaee808c5fb6b4e895ba30425285a5cdc5dd25bba2cd230f264c2200c331aec",
+      "gitBlobSHA1": "9bc871371b0ccae4563f0353dd6024db299b80e0"
+    },
+    {
+      "path": "upstream/Cargo.lock",
+      "sha256": "9d89af1892a255dbd5a0e66c2983e0c4d3893cfa301bd88278851562498473f0",
+      "gitBlobSHA1": "886c82549de5f50bc78597b1ff028eb7cf78e6f9"
+    },
+    {
+      "path": "upstream/Cargo.toml",
+      "sha256": "a643ae2ebea97c6b1144d7d24239bd49833a03d9ddf0002581d3712010acfe1d",
+      "gitBlobSHA1": "1019dbedd874b32c5148a37a2dd0a8901ca49a61"
+    },
+    {
+      "path": "upstream/libDF/Cargo.toml",
+      "sha256": "172f3526cd144dc7fb351cf7a24d3de89d07413e374c7a25b3e8812bb8503eb7",
+      "gitBlobSHA1": "c0f3271efa300b084706c4029ba67d1fcfb3806d"
+    },
+    {
+      "path": "upstream/models/DeepFilterNet3_onnx.tar.gz",
+      "sha256": "c94d91f70911001c946e0fabb4aa9adc37045f45a03b56008cb0c8244cb63616",
+      "gitBlobSHA1": "1c4f4ffe1015fbb4541433cf291234ca32338871"
+    },
+    {
+      "path": "upstream/libDF/src/util.rs",
+      "sha256": "10b1dd96fdefb71ea287ddd8131b53a5b254e376cb3384ab922f62413d13c5b7",
+      "gitBlobSHA1": "40444d98bbc7fb7b7ffac4423eec5845f93d82bc"
+    },
+    {
+      "path": "upstream/libDF/src/wav_utils.rs",
+      "sha256": "045aa96f0716d680e9d2e5c971f23ba79e4ec5be6103748e0673bf75057b21c3",
+      "gitBlobSHA1": "99e2cbc566786a8ec4ce39643ba8bd0866516fd5"
+    },
+    {
+      "path": "upstream/libDF/src/capi.rs",
+      "sha256": "6adb1b6158ead9505e3ccdb5a8f06a52ff361e1e49d1a28edc76ac05bc2756af",
+      "gitBlobSHA1": "37f9afd7c4fd424f66ffda33cd72d3c5a84d4542"
+    },
+    {
+      "path": "upstream/libDF/src/lib.rs",
+      "sha256": "716b6274c60344b25b7824a55d06d0fac0e58603faedbb86b3f3bd1ea6a256d3",
+      "gitBlobSHA1": "7ab568856b00dff25c11d2e4f72b0edd82343206"
+    },
+    {
+      "path": "upstream/libDF/src/logging.rs",
+      "sha256": "ff40894353711daae5a3f0871c764e3eb14ae50b788f77286ecf42b2b1cf77d5",
+      "gitBlobSHA1": "7960b1ba57f4ff2b435ff400506c696a3ab5785f"
+    },
+    {
+      "path": "upstream/libDF/src/transforms.rs",
+      "sha256": "bae9af1f2f3192aeab95cba52e0412763d17fad8e2ad17b691b42b1cee92d087",
+      "gitBlobSHA1": "7d6b1175e57cfc092dd123c28c423f84e0846d4d"
+    },
+    {
+      "path": "upstream/libDF/src/augmentations.rs",
+      "sha256": "d4a39279c4c72a41b539275ca25a2a36b42d2d7f7b84447b1b7f5aeb628b7183",
+      "gitBlobSHA1": "5bde02b725e1cb38a5237eb7a4d30f0f2507b64d"
+    },
+    {
+      "path": "upstream/libDF/src/dataloader.rs",
+      "sha256": "4f7f1f1f5ea1ae9fc3e154a89cde25e62be6cd3d00aabebd192dd63d68027fa4",
+      "gitBlobSHA1": "e1a4e831ff2b72f54b1b7e1c5e6f67764f92cb84"
+    },
+    {
+      "path": "upstream/libDF/src/tract.rs",
+      "sha256": "0f080a766955cf037a1642ebfe6de645b9161985379d5c7cc790a21a04f1e580",
+      "gitBlobSHA1": "b39a987269acd2bf76f1fc5aa6be9564242a4c27"
+    },
+    {
+      "path": "upstream/libDF/src/dataset.rs",
+      "sha256": "bf24b45f39a613d3b3fb60fadbc51b804be1f8bf9159494bf973215c1739135b",
+      "gitBlobSHA1": "cb81f5f1b25a8ca48b6c0e02060233432e4bb919"
+    },
+    {
+      "path": "upstream/libDF/src/hdf5_key_cache.rs",
+      "sha256": "490afdaf1f52ac524f74152d9c2b8e44fd1d3a34817e7c0eaf19b41566859997",
+      "gitBlobSHA1": "3d42c59e880c739aeccca9a84e635587c9d64066"
+    },
+    {
+      "path": "upstream/libDF/src/wasm.rs",
+      "sha256": "aa2537452a1ee4be17a1d9fd91b89ef198de1d1adb998f8d56f26374a5c20a2a",
+      "gitBlobSHA1": "2e02095b7161e8f63101152a539c80c103346ec0"
+    },
+    {
+      "path": "upstream/libDF/src/bin/sample-dataset.rs",
+      "sha256": "764b1a8beeeba17b799b8378538b2cf5aa78c445f208d870531d05ed3129281c",
+      "gitBlobSHA1": "cc6196c4488a4aa7a34049dc810c6250834b3234"
+    },
+    {
+      "path": "upstream/libDF/src/bin/sample-hdf5.rs",
+      "sha256": "8c0669d10de1b1f74dccb7bfc7146e10b8802fcc7a6597bbe5933e42e002edfd",
+      "gitBlobSHA1": "d67ecf5fd45e305635b81d435e00e5a28fcc64e9"
+    },
+    {
+      "path": "upstream/libDF/src/bin/enhance_wav.rs",
+      "sha256": "59668d26551c1176cd915dcfca14705835f7530a4869de383c5e0799b351a777",
+      "gitBlobSHA1": "b3759266066f6e87dca0c8871ea8ae7f0662ee6f"
+    }
+  ]
+}

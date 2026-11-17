@@ -1,0 +1,4 @@
+# Build/reference tests only; none of these packages ship in the app.
+-r requirements-coreml.txt
+torch==2.7.0
+einops==0.8.1
