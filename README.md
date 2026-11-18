@@ -79,4 +79,8 @@ Processing order is **Echo → Room de-reverb → WebRTC → Enhanced**. Each st
 
 Run `./scripts/test.sh` for the offline suite. For a live 60-second comparison using BlackHole 2ch, grant microphone permission, quit the menu app, then run `./scripts/benchmark.sh 60 off --enhanced dpdfnet2`. The script writes counters under `build/benchmarks/`. Local builds are ad-hoc signed. [Five-file release review](docs/V1_REVIEW.md) · [Hardware test guide](docs/BASELINE.md)
 
+## License
+
+MetalVoice2's original code is licensed under the GNU General Public License, version 3 only (`GPL-3.0-only`). The app includes the license in `Contents/Resources/Licenses/MetalVoice2/LICENSE`. Bundled third-party code and models retain their upstream terms. [Full license](LICENSE) · [Third-party notices](ThirdParty/)
+
 MetalVoice2 embeds the official RNNoise pretrained weights. Their redistribution terms remain an open question upstream. [RNNoise model provenance](ThirdParty/RNNoise/README.md#notices-and-model-provenance) · [Upstream licensing question](https://github.com/xiph/rnnoise/issues/284)

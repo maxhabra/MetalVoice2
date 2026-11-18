@@ -46,28 +46,28 @@ struct MenuView: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    if let logo = NSImage(named: "MetalVoice2-logo") {
-                        let artwork = Image(nsImage: logo).resizable().scaledToFit()
-                        artwork
-                            .overlay {
-                                if colorScheme == .dark {
-                                    // The wordmark starts one third of the way across the artwork.
-                                    GeometryReader { bounds in
-                                        Color.white.padding(.leading, bounds.size.width * 0.327)
-                                    }
-                                    .mask(artwork)
+            HStack(spacing: 8) {
+                if let logo = NSImage(named: "MetalVoice2-logo") {
+                    let artwork = Image(nsImage: logo).resizable().scaledToFit()
+                    artwork
+                        .overlay {
+                            if colorScheme == .dark {
+                                // The wordmark starts one third of the way across the artwork.
+                                GeometryReader { bounds in
+                                    Color.white.padding(.leading, bounds.size.width * 0.327)
                                 }
+                                .mask(artwork)
                             }
-                            .frame(width: 122, height: 29)
-                            .accessibilityLabel("MetalVoice2")
-                    } else {
-                        Text("MetalVoice2").font(.headline)
-                    }
-                    Text("Microphone noise reduction").font(.caption).foregroundStyle(.secondary)
+                        }
+                        .frame(width: 122, height: 29)
+                        .accessibilityLabel("MetalVoice2")
+                } else {
+                    Text("MetalVoice2").font(.headline)
                 }
-                Spacer()
+                Text("Microphone noise reduction")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 0)
                 Button("Refresh devices") { audio.refreshDevices() }
                     .disabled(audio.running || audio.busy)
                 Button("Quit") { NSApplication.shared.terminate(nil) }
@@ -121,7 +121,6 @@ struct MenuView: View {
                     .help(!audio.separateRoomControlsAvailable ? "LocalVQE already performs room cleanup. Your WPE setting is restored when you switch models." : "Reduce room reverberation with conservative online WPE (experimental). Adds 10 ms. May affect voice tone. Changes briefly restart audio.")
                 Spacer()
             }
-            .controlSize(.small).font(.subheadline)
             HStack(spacing: 16) {
                 Picker("WebRTC", selection: Binding(get: { audio.webRTCSelection }, set: audio.setWebRTCSelection)) {
                     Text("Off").tag(-1)
@@ -140,8 +139,6 @@ struct MenuView: View {
                 .disabled(audio.busy)
                 .help(audio.enhancedSuppression == .localVQE ? "LocalVQE v1.3: noise and room cleanup at 16 kHz speech bandwidth. Separate Echo and WPE are inactive. No playback capture or noise gate. Adds 34 ms; uses two CPU threads." : "Enhanced noise suppression. Use alone or together with WebRTC.")
             }
-            .controlSize(.small)
-            .font(.subheadline)
             if !audio.suppressionSupported {
                 Text("Select a microphone running at 48 kHz to use suppression.").font(.caption).foregroundStyle(.secondary)
             }

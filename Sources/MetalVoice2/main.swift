@@ -57,9 +57,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         add(audio.wantedRunning ? "Stop" : "Start", #selector(toggleAudio), enabled: audio.wantedRunning || audio.canStart)
         add(audio.muted ? "Unmute" : "Mute", #selector(toggleMute), enabled: audio.running && !audio.busy)
         menu.addItem(.separator())
-        add("Copy Report", #selector(copyReport), enabled: audio.running && !audio.busy)
-        add("Refresh Devices", #selector(refreshDevices), enabled: !audio.running && !audio.busy)
-        menu.addItem(.separator())
         add("Quit MetalVoice2", #selector(quit))
         return menu
     }
@@ -73,8 +70,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
     @objc private func toggleAudio() { audio.wantedRunning ? audio.stop() : audio.start() }
     @objc private func toggleMute() { if audio.running && !audio.busy { audio.toggleMute() } }
-    @objc private func copyReport() { audio.copyReport() }
-    @objc private func refreshDevices() { if !audio.running && !audio.busy { audio.refreshDevices() } }
     @objc private func quit() { NSApp.terminate(nil) }
 
     @objc private func togglePopover() {

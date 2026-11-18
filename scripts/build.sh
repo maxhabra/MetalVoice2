@@ -33,7 +33,8 @@ bundle="$staging_dir/MetalVoice2.app"
 mkdir -p "$bundle/Contents/MacOS"
 cp -X "$binary_dir/MetalVoice2" "$bundle/Contents/MacOS/MetalVoice2"
 cp Resources/Info.plist "$bundle/Contents/Info.plist"
-mkdir -p "$bundle/Contents/Resources/Licenses/LocalVQE"
+mkdir -p "$bundle/Contents/Resources/Licenses/MetalVoice2" "$bundle/Contents/Resources/Licenses/LocalVQE"
+cp -X LICENSE "$bundle/Contents/Resources/Licenses/MetalVoice2/"
 cp -X Resources/Brand/AppIcon.icns Resources/Brand/VoiceMark.png "$bundle/Contents/Resources/"
 # The panel uses this logo at 122 points wide. Ship a Retina-sized copy.
 sips -Z 366 Resources/Brand/MetalVoice2-logo.png \
