@@ -3,6 +3,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build/module-cache
 export CLANG_MODULE_CACHE_PATH="$PWD/build/module-cache"
+swiftc -module-cache-path build/module-cache Sources/MetalVoice2/VoiceLibrary.swift Tests/VoiceLibrary/main.swift -o build/voice-library-tests
+build/voice-library-tests
+voice_python="$HOME/Library/Application Support/MetalVoice2/RVC/venv/bin/python3"
+if [[ -x "$voice_python" ]]; then "$voice_python" -B Tests/VoiceGate/test_gate.py; fi
 python3 scripts/verify_webrtc.py
 python3 scripts/verify_rnnoise.py
 python3 scripts/verify_room.py

@@ -24,7 +24,7 @@ if [[ build/deepfilter/release/libmetalvoice_df.a -nt "$binary_dir/MetalVoice2" 
     rm -f "$binary_dir/MetalVoice2"
 fi
 swift build "${options[@]}" -c "$configuration" --product MetalVoice2
-destination="$PWD/build/MetalVoice2.app"
+destination="${METALVOICE_BUILD_DIR:-$PWD/build}/MetalVoice2.app"
 # Sign outside a synced Documents folder. File providers can restore FinderInfo
 # immediately after xattr removes it, causing codesign to reject a fresh build.
 staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/metalvoice2-build.XXXXXX")"
@@ -35,6 +35,16 @@ cp -X "$binary_dir/MetalVoice2" "$bundle/Contents/MacOS/MetalVoice2"
 cp Resources/Info.plist "$bundle/Contents/Info.plist"
 mkdir -p "$bundle/Contents/Resources/Licenses/MetalVoice2" "$bundle/Contents/Resources/Licenses/LocalVQE"
 cp -X LICENSE "$bundle/Contents/Resources/Licenses/MetalVoice2/"
+mkdir -p "$bundle/Contents/Resources/RVC/infer_pack" "$bundle/Contents/Resources/Licenses/RVC"
+cp -X Resources/RVC/{worker,gate,harvest}.py "$bundle/Contents/Resources/RVC/"
+mkdir -p "$bundle/Contents/Frameworks" "$bundle/Contents/Resources/Licenses/WORLD"
+clang++ -std=c++11 -O3 -target arm64-apple-macosx15.0 -dynamiclib -IThirdParty/WORLD/src \
+    ThirdParty/WORLD/src/{harvest,common,fft,matlabfunctions}.cpp \
+    -install_name @rpath/libWorldHarvest.dylib -o "$bundle/Contents/Frameworks/libWorldHarvest.dylib"
+codesign --force --sign - "$bundle/Contents/Frameworks/libWorldHarvest.dylib"
+cp -X ThirdParty/WORLD/{LICENSE.txt,README.md} ThirdParty/WORLD/src/world/macrodefinitions.h "$bundle/Contents/Resources/Licenses/WORLD/"
+cp -X ThirdParty/RVC/infer_pack/*.py "$bundle/Contents/Resources/RVC/infer_pack/"
+cp -X ThirdParty/RVC/LICENSE-* "$bundle/Contents/Resources/Licenses/RVC/"
 cp -X Resources/Brand/AppIcon.icns Resources/Brand/VoiceMark.png "$bundle/Contents/Resources/"
 # The panel uses this logo at 122 points wide. Ship a Retina-sized copy.
 sips -Z 366 Resources/Brand/MetalVoice2-logo.png \
@@ -76,6 +86,9 @@ mkdir -p "$destination/Contents/MacOS"
 cp -X "$bundle/Contents/MacOS/MetalVoice2" "$destination/Contents/MacOS/MetalVoice2.next"
 mv -f "$destination/Contents/MacOS/MetalVoice2.next" "$destination/Contents/MacOS/MetalVoice2"
 cp -X "$bundle/Contents/Info.plist" "$destination/Contents/Info.plist"
+mkdir -p "$destination/Contents/Frameworks"
+cp -X "$bundle/Contents/Frameworks/libWorldHarvest.dylib" "$destination/Contents/Frameworks/libWorldHarvest.next"
+mv -f "$destination/Contents/Frameworks/libWorldHarvest.next" "$destination/Contents/Frameworks/libWorldHarvest.dylib"
 ditto --norsrc --noextattr "$bundle/Contents/Resources" "$destination/Contents/Resources"
 ditto --norsrc --noextattr "$bundle/Contents/_CodeSignature" "$destination/Contents/_CodeSignature"
 codesign --verify "$destination"

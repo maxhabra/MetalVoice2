@@ -9,25 +9,40 @@
 
 <a href="Resources/Brand/AppIcon.icns"><img align="right" src="Resources/Brand/AppIcon.png" width="88" alt="MetalVoice2 macOS app icon"></a>
 
-A native macOS menu bar app that cleans up your microphone and sends it to a virtual microphone for calls or recording. Your voice keeps its original pitch. All processing runs locally, and the app saves no audio.
+MetalVoice2 is a native Apple Silicon menu bar app for microphone cleanup and optional real-time voice conversion. Audio flows from your microphone through the enabled processors to a virtual microphone for calls or recording. All processing runs locally.
 
-[App icon (ICNS)](Resources/Brand/AppIcon.icns) · [App icon (PNG)](Resources/Brand/AppIcon.png) · [Full logo (PNG)](Resources/Brand/MetalVoice2-logo.png)
+## Install and set up
 
-## Build and use
+Download the [v2.0-beta Apple Silicon ZIP](https://github.com/maxhabra/MetalVoice2/releases/tag/v2.0-beta), unzip it and move **MetalVoice2.app** to Applications. The ZIP includes the optional `setup_voice_runtime.sh` for voice conversion.
 
-**A virtual audio driver is required** to send the cleaned microphone signal to your calling or recording app. Install either [BlackHole 2ch](https://github.com/ExistentialAudio/BlackHole) or [VB-CABLE for macOS](https://vb-audio.com/Cable/).
-
-MetalVoice2 runs on Apple Silicon with macOS 15 or later. To build from source, install Command Line Tools with Swift 6, Rust/Cargo and Python 3. The first build needs internet access for build dependencies.
+You need macOS 15 or later and a **virtual audio driver**, such as [BlackHole 2ch](https://github.com/ExistentialAudio/BlackHole) or [VB-CABLE](https://vb-audio.com/Cable/). Building from source requires Command Line Tools with Swift 6, Rust/Cargo and Python 3. The first build downloads dependencies.
 
 ```sh
 ./scripts/build.sh
 open build/MetalVoice2.app --args --show
 ```
 
-1. In MetalVoice2, choose your physical microphone and its input channel. Select the installed virtual driver as the output. Set the physical microphone to **48,000 Hz** in Audio MIDI Setup to use the filters.
-2. Press **Start** and allow microphone access. In your calling or recording app, select that driver's recording device as the microphone. With BlackHole, select **BlackHole 2ch** in both apps. Switch off the calling app's own filtering when comparing models.
-3. Use the menu bar icon to change settings. Right-click for Start/Stop, Mute and Quit. Closing the panel keeps the microphone running.
-4. Turn on **Enable on launch** to start processing with your saved devices and filters whenever MetalVoice2 opens. To open it automatically when you sign in, put the app in Applications and add it under **System Settings → General → Login Items & Extensions → Open at Login**.
+1. In **Microphone**, turn on **Enable** and grant microphone access. Choose your physical input, channel and virtual output. Set the input to **48,000 Hz** in Audio MIDI Setup for cleanup or voice conversion.
+2. In your calling or recording app, select that same virtual device as its microphone. With BlackHole, choose **BlackHole 2ch** in both apps.
+3. Each tab has its own **Enable** and **Enable at launch**. Turn both tabs off to stop streaming. To open MetalVoice2 at login, add it under **System Settings → General → Login Items & Extensions**.
+
+The menu bar **M lights blue** for the microphone stage and **V lights violet** for voice conversion. **Red means muted** across both tabs. Right-click the icon for quick controls. Hover over a setting for help, including when it is greyed out.
+
+## Voice Changer · v2.0-beta
+
+Conversion runs **after microphone cleanup** in a local CPU worker using ContentVec, a selectable pitch estimator and an RVC decoder. For voice conversion, run `bash setup_voice_runtime.sh` from the extracted ZIP folder, or `./scripts/setup_voice_runtime.sh` from the source checkout. Microphone cleanup works independently.
+
+1. Under **Voice Changer**, turn on **Enable** and import a pitch-guided RVC v1 or v2 inference `.pth`. The app remembers its location. Keep the file in place. If you have a matching `.index`, use **Attach .index…**. A same-name index alongside the model is picked up on first import.
+2. For shared models, the app checks nearby VCClient folders. If prompted, use **Model assets…** to select the `modules` folder containing `contentvec/contentvec-f.onnx`. The default RMVPE estimator also uses `rmvpe/rmvpe_20231006.onnx`.
+3. Adjust **Pitch** in semitones and **Index blend** to set the contribution of the attached index. **Apply settings** saves edits per voice and restarts conversion. **Cancel** restores the saved values. **Enable** lets you bypass conversion while keeping the voice selected.
+
+| Voice setting | What to adjust |
+|---|---|
+| F0 estimator | **RMVPE (ONNX)** tracks input pitch with a neural model. **Harvest** tracks it from speech harmonics using the bundled WORLD algorithm. Select one and click **Apply settings** to save it for that voice. |
+| Chunk | Fresh audio collected per conversion. Lower values reduce waiting time but give the worker less time to finish. |
+| Extra history | Past audio used as context. Increasing it adds inference work without waiting for that much new audio. |
+| Noise gate / Gate hold | Set the input threshold in dBFS. If quiet syllables get cut off, increase hold in milliseconds. The input meter shows the applied gate. |
+| High-pass / Low-pass | Set the lower and upper frequency cutoffs on the converted voice. |
 
 ## Choose a processor
 
@@ -78,7 +93,7 @@ Processing order is **Echo → Room de-reverb → WebRTC → Enhanced**. Each st
 
 ## Verification
 
-Run `./scripts/test.sh` for the offline suite. For a live 60-second comparison using BlackHole 2ch, grant microphone permission, quit the menu app, then run `./scripts/benchmark.sh 60 off --enhanced dpdfnet2`. The script writes counters under `build/benchmarks/`. Local builds are ad-hoc signed. [Five-file release review](docs/V1_REVIEW.md) · [Hardware test guide](docs/BASELINE.md)
+Run `./scripts/test.sh` for the offline suite. For a live cleanup benchmark with BlackHole 2ch, quit the menu app and run `./scripts/benchmark.sh 60 off --enhanced dpdfnet2` after granting microphone access. Local builds are ad-hoc signed. [v2.0 review and voice timings](docs/V2_RC_REVIEW.md) · [Hardware test guide](docs/BASELINE.md)
 
 ## License
 

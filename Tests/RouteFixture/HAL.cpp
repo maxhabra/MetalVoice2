@@ -22,6 +22,8 @@ struct Listener {
 };
 std::vector<Listener> listeners;
 Unit *source = nullptr, *sink = nullptr;
+const float *fixtureAudio = nullptr;
+uint64_t fixtureTime = 0;
 
 OSStatus propertySize(AudioObjectID id, const AudioObjectPropertyAddress *address,
                       UInt32, const void *, UInt32 *bytes) {
@@ -89,7 +91,9 @@ OSStatus configure(AudioUnit unit, AudioUnitPropertyID key, AudioUnitScope, Audi
 }
 OSStatus success(AudioUnit) { return noErr; }
 OSStatus inputAudio(AudioUnit, AudioUnitRenderActionFlags *, const AudioTimeStamp *, UInt32, UInt32 n, AudioBufferList *list) CA_REALTIME_API {
-    std::fill_n(static_cast<float *>(list->mBuffers[0].mData), n, .5f);
+    auto *dest = static_cast<float *>(list->mBuffers[0].mData);
+    if (fixtureAudio) std::copy_n(fixtureAudio, n, dest);
+    else std::fill_n(dest, n, .5f);
     return noErr;
 }
 }
@@ -108,12 +112,20 @@ extern "C" void mv_fixture_fail_open(OSStatus status) { nextOpen = status; }
 extern "C" UInt32 mv_fixture_tick(float *pcm) {
     AudioTimeStamp time{};
     time.mFlags = kAudioTimeStampHostTimeValid;
-    time.mHostTime = mach_absolute_time();
+    time.mHostTime = fixtureTime ? fixtureTime : mach_absolute_time();
     AudioUnitRenderActionFlags flags = 0;
     source->capture.inputProc(source->capture.inputProcRefCon, &flags, &time, 1, 512, nullptr);
     AudioBufferList list{1, {{1, 512 * sizeof(float), pcm}}};
     sink->render.inputProc(sink->render.inputProcRefCon, &flags, &time, 0, 512, &list);
     return flags;
+}
+
+extern "C" void mv_fixture_audio(const float *input, uint64_t hostTime, float *output) {
+    fixtureAudio = input;
+    fixtureTime = hostTime;
+    mv_fixture_tick(output);
+    fixtureAudio = nullptr;
+    fixtureTime = 0;
 }
 
 #define REPLACE(symbol, replacement) \
