@@ -27,6 +27,7 @@ open build/MetalVoice2.app --args --show
 1. In MetalVoice2, choose your physical microphone and its input channel. Select the installed virtual driver as the output. Set the physical microphone to **48,000 Hz** in Audio MIDI Setup to use the filters.
 2. Press **Start** and allow microphone access. In your calling or recording app, select that driver's recording device as the microphone. With BlackHole, select **BlackHole 2ch** in both apps. Switch off the calling app's own filtering when comparing models.
 3. Use the menu bar icon to change settings. Right-click for Start/Stop, Mute and Quit. Closing the panel keeps the microphone running.
+4. Turn on **Enable on launch** to start processing with your saved devices and filters whenever MetalVoice2 opens. To open it automatically when you sign in, put the app in Applications and add it under **System Settings → General → Login Items & Extensions → Open at Login**.
 
 ## Choose a processor
 

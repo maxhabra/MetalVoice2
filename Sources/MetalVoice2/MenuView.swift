@@ -120,6 +120,9 @@ struct MenuView: View {
                     .disabled(!audio.separateRoomControlsAvailable || audio.busy || (!audio.roomDereverb && !audio.suppressionSupported))
                     .help(!audio.separateRoomControlsAvailable ? "LocalVQE already performs room cleanup. Your WPE setting is restored when you switch models." : "Reduce room reverberation with conservative online WPE (experimental). Adds 10 ms. May affect voice tone. Changes briefly restart audio.")
                 Spacer()
+                Toggle("Enable on launch", isOn: $audio.enableOnLaunch)
+                    .toggleStyle(.checkbox)
+                    .help("Start microphone processing with your saved settings whenever MetalVoice2 opens.")
             }
             HStack(spacing: 16) {
                 Picker("WebRTC", selection: Binding(get: { audio.webRTCSelection }, set: audio.setWebRTCSelection)) {

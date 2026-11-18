@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
+        if audio.enableOnLaunch { audio.start() }
         if CommandLine.arguments.contains("--show") { togglePopover() }
     }
 

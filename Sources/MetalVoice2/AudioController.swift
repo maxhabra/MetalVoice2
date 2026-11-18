@@ -99,6 +99,9 @@ final class AudioController: ObservableObject {
     @Published var stats = MVStats()
     @Published var panelVisible = false
     @Published var showDetails = false
+    @Published var enableOnLaunch = UserDefaults.standard.bool(forKey: "enableOnLaunch") {
+        didSet { UserDefaults.standard.set(enableOnLaunch, forKey: "enableOnLaunch") }
+    }
     @Published var panelContentHeight: CGFloat = 324
     @Published private(set) var echoCancellation = false
     @Published private(set) var roomDereverb = false
@@ -163,7 +166,6 @@ final class AudioController: ObservableObject {
         enhancedSuppression = EnhancedSuppression(rawValue: defaults.string(forKey: "enhancedSuppression") ?? "off") ?? .off
         refreshDevices()
         if let input = selectedInput { channel = max(0, min(channel, input.inputs - 1)) }
-        // No automatic capture at launch; Start is an explicit action.
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.poll() }
         let center = NSWorkspace.shared.notificationCenter
         observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
