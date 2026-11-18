@@ -7,6 +7,7 @@
 
 #include "localvqe_graph.h"
 #include "gguf.h"
+#include "ggml-cpu.h"
 #include "model_hash.h"
 
 #ifdef GGML_USE_CUDA
@@ -801,6 +802,13 @@ bool load_graph_model_ex(const char* path, dvqe_graph_model& model,
     auto fn = (ggml_backend_set_n_threads_t)
         ggml_backend_reg_get_proc_address(reg, "ggml_backend_set_n_threads");
     if (fn) fn(model.backend, n_threads);
+    if (ggml_backend_is_cpu(model.backend)) {
+        auto params = ggml_threadpool_params_default(n_threads);
+        params.poll = 0;  // Sleep between audio hops.
+        model.cpu_pool = ggml_threadpool_new(&params);
+        if (!model.cpu_pool) return fail();
+        ggml_backend_cpu_set_threadpool(model.backend, model.cpu_pool);
+    }
 
     if (verbose) {
         const char* dn = ggml_backend_dev_name(dev);
@@ -845,6 +853,7 @@ bool load_graph_model_ex(const char* path, dvqe_graph_model& model,
 void free_graph_model(dvqe_graph_model& model) {
     if (model.weight_buf) { ggml_backend_buffer_free(model.weight_buf); model.weight_buf = nullptr; }
     if (model.backend) { ggml_backend_free(model.backend); model.backend = nullptr; }
+    if (model.cpu_pool) { ggml_threadpool_free(model.cpu_pool); model.cpu_pool = nullptr; }
     if (model.weight_ctx) { ggml_free(model.weight_ctx); model.weight_ctx = nullptr; }
     model.weights.clear();
 }
@@ -1592,7 +1601,7 @@ bool build_stream_graph(dvqe_graph_model& m, dvqe_stream_graph& sg) {
     return true;
 }
 
-void process_frame_graph(dvqe_stream_graph& sg, dvqe_graph_model& m,
+ggml_status process_frame_graph(dvqe_stream_graph& sg, dvqe_graph_model& m,
                          const float* mic_pcm_window,
                          const float* ref_pcm_window,
                          float* enhanced_pcm_window) {
@@ -1601,7 +1610,8 @@ void process_frame_graph(dvqe_stream_graph& sg, dvqe_graph_model& m,
     ggml_backend_tensor_set(sg.mic_pcm_in, mic_pcm_window, 0, K * sizeof(float));
     ggml_backend_tensor_set(sg.ref_pcm_in, ref_pcm_window, 0, K * sizeof(float));
 
-    ggml_backend_graph_compute(m.backend, sg.graph);
+    const auto result = ggml_backend_graph_compute(m.backend, sg.graph);
+    if (result != GGML_STATUS_SUCCESS) return result;
 
     ggml_backend_tensor_get(sg.enhanced_pcm_out, enhanced_pcm_window, 0, K * sizeof(float));
 
@@ -1667,6 +1677,7 @@ void process_frame_graph(dvqe_stream_graph& sg, dvqe_graph_model& m,
             ggml_backend_tensor_set(w, sg.hist_scratch.data(), 0, n);
         }
     }
+    return GGML_STATUS_SUCCESS;
 }
 
 void reset_stream_graph(dvqe_stream_graph& sg, dvqe_graph_model& m) {

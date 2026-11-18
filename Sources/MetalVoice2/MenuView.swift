@@ -7,6 +7,7 @@ struct MenuView: View {
     static let panelHeight: CGFloat = 324
 
     @ObservedObject var audio: AudioController
+    @Environment(\.colorScheme) private var colorScheme
     let viewportHeight: CGFloat
 
     private var naturalHeight: CGFloat { audio.panelContentHeight }
@@ -46,9 +47,24 @@ struct MenuView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "waveform").font(.title2).foregroundStyle(.tint)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("MetalVoice2").font(.headline)
+                    if let logo = NSImage(named: "MetalVoice2-logo") {
+                        let artwork = Image(nsImage: logo).resizable().scaledToFit()
+                        artwork
+                            .overlay {
+                                if colorScheme == .dark {
+                                    // The wordmark starts one third of the way across the artwork.
+                                    GeometryReader { bounds in
+                                        Color.white.padding(.leading, bounds.size.width * 0.327)
+                                    }
+                                    .mask(artwork)
+                                }
+                            }
+                            .frame(width: 122, height: 29)
+                            .accessibilityLabel("MetalVoice2")
+                    } else {
+                        Text("MetalVoice2").font(.headline)
+                    }
                     Text("Microphone noise reduction").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()

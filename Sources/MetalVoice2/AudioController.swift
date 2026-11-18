@@ -2,6 +2,8 @@ import AppKit
 import AVFoundation
 import AudioCore
 
+let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"
+
 enum EnhancedSuppression: String, CaseIterable {
     case off, rnnoise, deepFilterNet3 = "deepfilternet3", dpdfNet2 = "dpdfnet2", localVQE = "localvqe"
     var label: String {
@@ -103,7 +105,8 @@ final class AudioController: ObservableObject {
     @Published private(set) var noiseSuppression = false
     @Published private(set) var suppressionLevel = 1
     @Published private(set) var enhancedSuppression: EnhancedSuppression = .off
-    @Published private(set) var wantedRunning = false
+    @Published private var recovery = DeviceRecovery()
+    var wantedRunning: Bool { recovery.requested }
 
     var inputs: [AudioDevice] { devices.filter { $0.inputs > 0 && !$0.isVirtual } }
     var outputs: [AudioDevice] { devices.filter { $0.outputs > 0 && $0.isVirtual } }
@@ -142,7 +145,7 @@ final class AudioController: ObservableObject {
     private var sleeping = false
     private var generation = 0
     private var pollPending = false
-    private var retryAt = Date.distantPast
+    private var inventoryGeneration: UInt64 = 0
     private var unchangedPolls = 0
     private var lastFrames: UInt64 = 0
     private var lastOutputFrames: UInt64 = 0
@@ -159,6 +162,7 @@ final class AudioController: ObservableObject {
         suppressionLevel = min(3, max(0, defaults.object(forKey: "suppressionLevel") as? Int ?? 1))
         enhancedSuppression = EnhancedSuppression(rawValue: defaults.string(forKey: "enhancedSuppression") ?? "off") ?? .off
         refreshDevices()
+        if let input = selectedInput { channel = max(0, min(channel, input.inputs - 1)) }
         // No automatic capture at launch; Start is an explicit action.
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.poll() }
         let center = NSWorkspace.shared.notificationCenter
@@ -172,7 +176,7 @@ final class AudioController: ObservableObject {
             guard let self else { return }
             self.sleeping = false
             self.refreshDevices()
-            if self.wantedRunning { self.retryAt = Date().addingTimeInterval(1); self.status = "Reconnecting…" }
+            if self.wantedRunning { self.recovery.retryAt = Date().addingTimeInterval(1); self.status = "Reconnecting…" }
             else { self.status = "Ready" }
         })
     }
@@ -184,7 +188,6 @@ final class AudioController: ObservableObject {
     }
 
     func refreshDevices() {
-        let previouslyHadDevices = !devices.isEmpty
         devices = AudioDevice.list()
         if inputUID.isEmpty {
             inputUID = inputs.first(where: \.isDefaultInput)?.uid ?? inputs.first?.uid ?? ""
@@ -193,7 +196,6 @@ final class AudioController: ObservableObject {
             outputUID = outputs.first(where: { $0.name.localizedCaseInsensitiveContains("BlackHole 2ch") })?.uid
                 ?? outputs.first(where: { $0.name.localizedCaseInsensitiveContains("BlackHole") })?.uid ?? ""
         }
-        if !previouslyHadDevices, let input = selectedInput { channel = max(0, min(channel, input.inputs - 1)) }
     }
 
     func chooseInput(_ uid: String) { inputUID = uid; channel = 0; saveSelection() }
@@ -246,7 +248,7 @@ final class AudioController: ObservableObject {
 
     func start() {
         guard !busy, !running else { return }
-        wantedRunning = true
+        recovery.request()
         error = nil
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized: startAuthorized()
@@ -265,18 +267,18 @@ final class AudioController: ObservableObject {
     }
 
     private func permissionDenied() {
-        wantedRunning = false; status = "Microphone permission needed"
+        recovery.cancel(); status = "Microphone permission needed"
         error = "Allow MetalVoice2 in System Settings → Privacy & Security → Microphone, then press Start."
     }
 
     private func startAuthorized() {
         guard !sleeping else { return }
         refreshDevices()
-        guard let input = selectedInput, let output = selectedOutput, channel < input.inputs else {
+        guard let input = selectedInput, let output = selectedOutput, (0..<input.inputs).contains(channel) else {
             status = "Waiting for selected devices"
             error = outputs.isEmpty ? "No virtual output found. Install or enable BlackHole, then Refresh devices."
                 : "Reconnect the selected devices, or choose another microphone and virtual output."
-            retryAt = Date().addingTimeInterval(3)
+            recovery.waitForDevice()
             return
         }
         saveSelection()
@@ -302,14 +304,14 @@ final class AudioController: ObservableObject {
                 self.status = result == 0 ? self.activeStatus : "Could not start"
                 self.error = result == 0 ? nil : failure
                 self.lastFrames = 0; self.lastOutputFrames = 0; self.unchangedPolls = 0
-                self.retryAt = Date().addingTimeInterval(3)
-                if result != 0 { self.wantedRunning = false }
+                self.recovery.completedStart(result)
+                if result == MVStartDeviceNotReady { self.status = "Waiting for selected devices" }
             }
         }
     }
 
     func stop(preserveIntent: Bool = false, restartImmediately: Bool = false) {
-        if !preserveIntent { wantedRunning = false }
+        if !preserveIntent { recovery.cancel() }
         generation += 1
         let token = generation
         busy = true
@@ -348,7 +350,7 @@ final class AudioController: ObservableObject {
 
     private func writeReport(_ stats: MVStats) {
         let report: [String: Any] = [
-            "version": "0.9.0", "mode": suppressionModeName(webRTCLevel: stats.noise_suppression_level, enhanced: stats.enhanced_suppression, roomDereverb: stats.room_dereverb != 0, echo: stats.echo_cancellation != 0),
+            "version": appVersion, "mode": suppressionModeName(webRTCLevel: stats.noise_suppression_level, enhanced: stats.enhanced_suppression, roomDereverb: stats.room_dereverb != 0, echo: stats.echo_cancellation != 0),
             "noiseSuppressionLevel": stats.noise_suppression_level,
             "echoCancellation": stats.echo_cancellation != 0,
             "echoAlgorithm": "WebRTC AEC3 · webrtc-audio-processing 2.1",
@@ -404,18 +406,23 @@ final class AudioController: ObservableObject {
     private func poll() {
         guard !busy, !sleeping, !pollPending else { return }
         if !running {
-            if wantedRunning && Date() >= retryAt { start() }
+            if recovery.shouldRetry() { start() }
             return
         }
         pollPending = true
-        let token = generation
+        let token = generation, lastInventory = inventoryGeneration
         control.async { [weak self] in
             guard let self else { return }
             var snapshot = MVStats()
             mv_stats(self.engine, &snapshot)
+            let inventory = lastInventory != snapshot.device_list_generation ? AudioDevice.list() : nil
             DispatchQueue.main.async {
                 self.pollPending = false
                 guard token == self.generation else { return }
+                if let inventory {
+                    self.devices = inventory
+                    self.inventoryGeneration = snapshot.device_list_generation
+                }
                 if snapshot.input_frames == self.lastFrames || snapshot.output_frames == self.lastOutputFrames {
                     self.unchangedPolls += 1
                 } else { self.unchangedPolls = 0 }
@@ -431,7 +438,7 @@ final class AudioController: ObservableObject {
                 if snapshot.device_changed != 0 || snapshot.last_error != 0 || self.unchangedPolls >= 4 {
                     self.error = snapshot.device_changed != 0 || snapshot.last_error == 0 ? "Audio route changed; reconnecting selected devices."
                         : "Core Audio error \(snapshot.last_error); reconnecting."
-                    self.retryAt = Date().addingTimeInterval(1)
+                    self.recovery.retryAt = Date().addingTimeInterval(1)
                     self.stop(preserveIntent: true)
                     return
                 }
@@ -441,7 +448,7 @@ final class AudioController: ObservableObject {
     }
 
     func shutdown() {
-        wantedRunning = false
+        recovery.cancel()
         timer?.invalidate()
         control.sync { mv_stop(engine) }
     }

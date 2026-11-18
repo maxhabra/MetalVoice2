@@ -17,7 +17,7 @@
     "sha256": "c4f7912485c32cfc206c536f2f050b52513f2f613fdbc616391f6b26ab1d51ec",
     "license": "Apache-2.0"
   },
-  "modifications": "DSP sources unchanged. Local CMake builds joint-model C API + GGML CPU/Accelerate subset; no GTCRN backend or GRU patch. Unused MNIST demo .gitignore amended to retain its committed files for source verification. No shared runtime dependencies.",
+  "modifications": "LocalVQE CPU graph pool lifetime and inference failure propagation are patched. Original hashes appear in upstream_file_hashes. Local CMake builds joint-model C API + GGML CPU/Accelerate subset; no GTCRN backend or GRU patch. Unused MNIST demo .gitignore amended to retain its committed files for source verification. No shared runtime dependencies.",
   "files": {
     "upstream/.github/workflows/pages.yml": "f8f9a107193d1615d0142bb7eec4373774aa1300840c78031736abc963b53c37",
     "upstream/.gitignore": "2768ab0a03199c7c04642589a4b5e0eefcedecdbc037842115dc078c87bee520",
@@ -60,10 +60,10 @@
     "upstream/ggml/gtcrn/gtcrn_ggml.cpp": "f8909f90e9ccd360a8332ec0bc9c642ae08fdbfe500804587ebdbcc9bd5f2d09",
     "upstream/ggml/gtcrn/test_gtcrn.cpp": "003c96111e02145a09a9ee305d7f99556cad654d314d0abab87294daeed2a8e6",
     "upstream/ggml/localvqe.cpp": "438fdc1a7e678da06c935a0e75df07aa85f555eb7ef4146f92cf6d024e64d387",
-    "upstream/ggml/localvqe_api.cpp": "76510c8250a3af232a6f241643683dad94d9b17f3c184da37870644005b77573",
+    "upstream/ggml/localvqe_api.cpp": "1d0214971a220c77cc9337bebdeb9eeeec421a1a3bacec56d147748ee34d117e",
     "upstream/ggml/localvqe_api.h": "ef2871bde8cd8fe9aa8cd5c3b7d11cc72efb7bb1cc29f726522ace87ad490877",
-    "upstream/ggml/localvqe_graph.cpp": "add57a11343753a0810e26d82380cc63d26e561b3cd1264efa4beef2b5900e22",
-    "upstream/ggml/localvqe_graph.h": "962a3420dd77b991f659af7f3c82a4a9db7ccabd39ecb4ca9d6f156e4a85e2ea",
+    "upstream/ggml/localvqe_graph.cpp": "cce01e771fa9f0c6083b894fd821a92ed4a34d517150b54990374d16dfeab6fd",
+    "upstream/ggml/localvqe_graph.h": "8fea8fc080ccb510f2903f2268ec4ab3e84d3e4403561aacaddfc565437e6af7",
     "upstream/ggml/localvqe_model.cpp": "99507bfee74c8b9cf1e0b7ef1027d8551954278d887b78fb65643a777e45bb7d",
     "upstream/ggml/localvqe_model.h": "dd3d04210462cb6bb2e5c99a475d71c2041ddca9c0af190e3c2983a31554a114",
     "upstream/ggml/model_hash.cpp": "bbdd538da35f67c70a6726f3c6abf2671e01c5dfb2ce86392ff14acbcc043d58",
@@ -1998,5 +1998,10 @@
     "upstream/web/smoke_test.mjs": "aa4fd81f5d1ef7bc4313e8d337cdf7915246399ff15c095fa76057652d464f7a",
     "upstream/web/style.css": "6aad1c04db4ced2706898845b6809355ce7196ab6332c0cb1623b709e63351d5",
     "upstream/web/worker.js": "00f9902f0359564f0b21a7c95d413b7b473e32dd8b266d8a49db75d26e8a8967"
+  },
+  "upstream_file_hashes": {
+    "upstream/ggml/localvqe_graph.h": "962a3420dd77b991f659af7f3c82a4a9db7ccabd39ecb4ca9d6f156e4a85e2ea",
+    "upstream/ggml/localvqe_graph.cpp": "add57a11343753a0810e26d82380cc63d26e561b3cd1264efa4beef2b5900e22",
+    "upstream/ggml/localvqe_api.cpp": "76510c8250a3af232a6f241643683dad94d9b17f3c184da37870644005b77573"
   }
 }

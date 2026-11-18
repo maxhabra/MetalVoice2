@@ -39,7 +39,7 @@ static void boundaries() {
 static void simulation(double inRate, double outRate, double drift, double duration) {
     auto t = std::make_unique<mv::Transport>();
     const uint32_t captureBlock = 128, renderBlock = 256;
-    const auto target = uint32_t(std::ceil(std::max(256.0, renderBlock * inRate / outRate * 2))) + mv::Transport::taps;
+    const auto target = uint32_t(std::ceil(std::max(256.0, renderBlock * inRate / outRate * 2))) + mv::Transport::filterLength(inRate, outRate);
     t->configure(inRate, outRate, target);
     const double capturePeriod = captureBlock / (inRate * (1 + drift / 1e6));
     const double renderPeriod = renderBlock / outRate;
@@ -85,6 +85,34 @@ static void simulation(double inRate, double outRate, double drift, double durat
               << ", correction " << finalPPM << " ppm\n";
 }
 
+static void downsampling(double rate, double tone, bool passband) {
+    auto transport = std::make_unique<mv::Transport>();
+    const unsigned inputCount = unsigned(rate / 100);
+    std::vector<float> input(inputCount);
+    std::array<float, 80> output{};
+    transport->configure(rate, 8000, 2 * inputCount + mv::Transport::filterLength(rate, 8000));
+    double energy = 0, error = 0;
+    unsigned measured = 0;
+    for (int hop = 0; hop < 120; ++hop) {
+        for (unsigned i = 0; i < inputCount; ++i)
+            input[i] = float(.5 * std::sin(2 * std::numbers::pi * tone * (hop * inputCount + i) / rate));
+        require(transport->push(input.data(), inputCount, 1e9 + hop * 1e7), "Downsampling overflow");
+        const auto result = transport->render(output.data(), output.size());
+        if (hop < 10) continue;
+        require(result.valid && !result.underrun, "Downsampling underrun");
+        for (size_t i = 0; i < output.size(); ++i) {
+            const double time = (result.sourceHostNS - 1e9) / 1e9 + i * (1 + result.correctionPPM / 1e6) / 8000;
+            energy += output[i] * output[i];
+            error += std::pow(output[i] - .5 * std::sin(2 * std::numbers::pi * tone * time), 2);
+        }
+        measured += output.size();
+    }
+    const auto db = 10 * std::log10(energy / (.125 * measured));
+    if (passband) require(std::abs(db) < .1 && std::sqrt(error / measured) < .003, "Passband gain/timestamp");
+    else require(db < -60, "Downsampler failed 60 dB rejection");
+    std::cout << rate << " to 8000 Hz, tone " << tone << " Hz, gain " << db << " dB\n";
+}
+
 static void concurrentQueue() {
     auto t = std::make_unique<mv::Transport>();
     t->configure(48000, 48000, 544);
@@ -121,8 +149,13 @@ static void concurrentQueue() {
     std::cout << "PASS concurrent producer/consumer, 1.28 million rendered samples\n";
 }
 
-int main() {
+void routeTests();
+int main(int argc, char **argv) {
     try {
+        if (argc == 2 && std::string(argv[1]) == "--route-fixture") {
+            routeTests();
+            return 0;
+        }
         boundaries();
         std::cout << "PASS priming, timestamp validity, DC gain, underrun, overflow, recovery\n";
         simulation(48000, 48000, 0, 4);
@@ -131,6 +164,10 @@ int main() {
         simulation(48000, 48000, 500, 120);
         simulation(48000, 48000, -500, 120);
         simulation(44100, 48000, 300, 120);
+        for (double rate : {48000., 192000.}) {
+            for (double tone : {1000., 3200.}) downsampling(rate, tone, true);
+            for (double tone : {4500., 5000., 7000.}) downsampling(rate, tone, false);
+        }
         concurrentQueue();
         return 0;
     } catch (const std::exception &error) {

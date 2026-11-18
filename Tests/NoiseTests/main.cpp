@@ -183,26 +183,70 @@ static void framing() {
     uint64_t produced = 0, consumed = 0;
     for (int callback = 0; callback < 100; ++callback) {
         for (size_t i = 0; i < captured.size(); ++i) captured[i] = float(produced + i);
-        require(queue->push(captured.data(), 512, 1e9 + produced * 1e9 / 48000, 48000), "Capture queue overflowed");
+        require(queue->push(captured.data(), 512, 1e9 + produced * 1e9 / 48000), "Capture queue overflowed");
         produced += 512;
         double time = 0;
-        while (queue->pop(processed.data(), 480, time)) {
+        while (queue->pop(processed.data(), 480, time) == mv::CaptureQueue::Read::ready) {
             require(std::abs(time - (1e9 + consumed * 1e9 / 48000)) < 0.01, "Framing changed source timestamps");
             for (size_t i = 0; i < processed.size(); ++i) require(processed[i] == consumed + i, "Framing reordered or lost samples");
             consumed += 480;
         }
     }
     require(produced - consumed < 480, "Unexpected frame accumulation");
-    require(!queue->push(captured.data(), mv::CaptureQueue::capacity + 1, 0, 48000), "Oversized capture must be rejected");
+    require(!queue->push(captured.data(), mv::CaptureQueue::capacity + 1, 0), "Oversized capture must be rejected");
     require(queue->overruns() == 1, "Capture overrun counter missing");
     queue->discard();
     double time = 0;
-    require(!queue->pop(processed.data(), 480, time), "Discard must remove stale audio");
+    require(queue->pop(processed.data(), 480, time) == mv::CaptureQueue::Read::waiting, "Discard must remove stale audio");
     auto transport = std::make_unique<mv::Transport>();
     transport->configure(48000, 48000, 544);
     transport->markDiscontinuity();
     require(transport->render(processed.data(), 480).resync, "Processor reset must invalidate queued output");
     std::cout << "PASS 512-to-480 framing, timestamps, overflow rejection, discontinuity handoff\n";
+}
+
+static void captureGaps() {
+    using Read = mv::CaptureQueue::Read;
+    auto queue = std::make_unique<mv::CaptureQueue>();
+    std::array<float, 480> input{}, output{};
+    double stamp = 0;
+    const auto at = [](size_t sample) { return 1e9 + sample * (1e9 / 48000); };
+    const auto push = [&](uint32_t n, double host, float value) {
+        input.fill(value);
+        require(queue->push(input.data(), n, host), "Capture gap setup overflowed");
+    };
+    const auto pop = [&] { return queue->pop(output.data(), output.size(), stamp); };
+
+    // The first 256 samples straddle the physical ring end in the second run.
+    for (uint32_t prefix : {0u, uint32_t(mv::CaptureQueue::capacity - 128)}) {
+        queue->reset();
+        for (uint32_t done = 0; done < prefix;) {
+            const auto n = std::min(480u, prefix - done);
+            push(n, at(done), .1f);
+            require(queue->pop(output.data(), n, stamp) == Read::ready, "Prefix framing");
+            done += n;
+        }
+        push(256, at(prefix), .25f);
+        push(224, at(prefix + 736), .5f);
+        require(pop() == Read::gap && pop() == Read::waiting, "Incomplete pre-gap hop reached DSP");
+        push(256, at(prefix + 960), .5f);
+        require(pop() == Read::ready && std::abs(stamp - at(prefix + 736)) < .01, "Post-gap timestamp");
+        require(std::all_of(output.begin(), output.end(), [](float x) { return x == .5f; }), "Spliced hop");
+        push(480, at(prefix + 4000), 1);
+        require(pop() == Read::gap && pop() == Read::ready, "Boundary gap dropped a complete hop");
+        push(480, 0, 1);
+        require(pop() == Read::gap && pop() == Read::ready && stamp == 0, "Timestamp loss");
+        push(480, at(prefix + 4960), 1);
+        require(pop() == Read::gap && pop() == Read::ready && stamp > 0, "Timestamp recovery");
+        require(queue->overruns() == 0, "A timestamp gap is not a FIFO overflow");
+    }
+    queue->reset();
+    push(256, at(0), 1);
+    require(!queue->push(input.data(), mv::CaptureQueue::capacity + 1, 0), "Expected overrun");
+    queue->discard(); // The worker resets its pipeline immediately on overrun.
+    push(480, at(2000), .5f);
+    require(pop() == Read::ready && stamp == at(2000), "Redundant reset after queue discard");
+    std::puts("PASS no mixed capture hops at timestamp gaps, wrap and timestamp loss/recovery");
 }
 
 static void phaseDelays() {
@@ -232,11 +276,11 @@ static uint64_t workerPhaseSimulation(uint32_t target) {
     uint64_t underruns = 0;
     auto process = [&] {
         double hostNS = 0;
-        while (queue->pop(work.data(), 480, hostNS))
+        while (queue->pop(work.data(), 480, hostNS) == mv::CaptureQueue::Read::ready)
             require(transport->push(work.data(), 480, hostNS - mv_ns_delay_frames() * 1e9 / 48000), "Worker output overflowed");
     };
     for (int callback = 0; callback < 3000; ++callback) {
-        require(queue->push(capture.data(), 512, 1e9 + callback * 512e9 / 48000, 48000), "Worker input overflowed");
+        require(queue->push(capture.data(), 512, 1e9 + callback * 512e9 / 48000), "Worker input overflowed");
         // Periodically move the worker completion across the render boundary,
         // at different 512/480 frame phases. No source samples are lost.
         const bool late = callback % 17 == 13 || callback % 29 == 7;
@@ -256,6 +300,7 @@ int main(int argc, char **argv) {
         }
         pipelineTests();
         framing();
+        captureGaps();
         phaseDelays();
         require(workerPhaseSimulation(1056) > 0, "Regression setup must reproduce the old worker scheduling underrun");
         require(workerPhaseSimulation(1536) == 0, "Worker scheduling phase changes must not underflow the protected queue");

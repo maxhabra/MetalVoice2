@@ -24,3 +24,9 @@ target_include_directories(mv_localvqe_api PUBLIC ${vqe})
 target_link_libraries(mv_localvqe_api PUBLIC ggml)
 add_executable(localvqe-regression ${vqe}/tests/test_regression.cpp)
 target_link_libraries(localvqe-regression PRIVATE mv_localvqe_api)
+
+# The graph copy redirects one backend call for deterministic failure injection.
+add_executable(localvqe-failure-test EXCLUDE_FROM_ALL
+    ../../Tests/LocalVQEFailure/main.cpp ${vqe}/localvqe_graph.cpp)
+target_compile_definitions(localvqe-failure-test PRIVATE ggml_backend_graph_compute=mv_test_graph_compute)
+target_link_libraries(localvqe-failure-test PRIVATE mv_localvqe_api)

@@ -2,6 +2,8 @@
 // not interpose an image's own references to its replacement functions.
 #include <stdlib.h>
 #include <stddef.h>
+#include <pthread.h>
+#include <stdatomic.h>
 
 static _Thread_local int tracking;
 static _Thread_local size_t allocations;
@@ -22,3 +24,14 @@ MV_INTERPOSE(tracked_calloc, calloc)
 MV_INTERPOSE(tracked_realloc, realloc)
 MV_INTERPOSE(tracked_aligned_alloc, aligned_alloc)
 MV_INTERPOSE(tracked_posix_memalign, posix_memalign)
+
+
+// Count worker creation across all threads in tests that exercise GGML.
+static _Atomic unsigned long thread_creations;
+unsigned long mv_test_thread_count(void) { return atomic_load(&thread_creations); }
+static int tracked_pthread_create(pthread_t *thread, const pthread_attr_t *attrs,
+                                  void *(*start)(void *), void *arg) {
+    atomic_fetch_add(&thread_creations, 1);
+    return pthread_create(thread, attrs, start, arg);
+}
+MV_INTERPOSE(tracked_pthread_create, pthread_create)

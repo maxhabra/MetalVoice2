@@ -84,7 +84,7 @@ func runBenchmark(arguments: [String]) -> Int32 {
     let finalUsage = usage()
     mv_stop(engine)
     let report: [String: Any] = [
-        "version": "0.9.0", "mode": suppressionModeName(webRTCLevel: nsLevel, enhanced: enhanced.nativeMode, roomDereverb: stats.room_dereverb != 0, echo: stats.echo_cancellation != 0),
+        "version": appVersion, "mode": suppressionModeName(webRTCLevel: nsLevel, enhanced: enhanced.nativeMode, roomDereverb: stats.room_dereverb != 0, echo: stats.echo_cancellation != 0),
         "noiseSuppressionLevel": stats.noise_suppression_level,
         "enhancedSuppression": enhanced.rawValue,
         "echoCancellation": stats.echo_cancellation != 0,

@@ -55,6 +55,25 @@ UInt32 channelCount(AudioDeviceID id, AudioObjectPropertyScope scope) {
     for (UInt32 i = 0; i < list->mNumberBuffers; ++i) count += list->mBuffers[i].mNumberChannels;
     return count;
 }
+struct DeviceRoute {
+    AudioDeviceID id;
+    std::string uid;
+    UInt32 alive, channels, buffer;
+    double rate;
+    bool operator==(const DeviceRoute &) const = default;
+};
+DeviceRoute deviceRoute(AudioDeviceID id, AudioObjectPropertyScope scope) {
+    return {id, stringProperty(id, kAudioDevicePropertyDeviceUID),
+            property<UInt32>(id, kAudioDevicePropertyDeviceIsAlive), channelCount(id, scope),
+            property<UInt32>(id, kAudioDevicePropertyBufferFrameSize),
+            property<Float64>(id, kAudioDevicePropertyNominalSampleRate)};
+}
+
+class DeviceNotReady : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
 double reportedLatency(AudioDeviceID id, AudioObjectPropertyScope scope, double rate) {
     UInt32 frames = property<UInt32>(id, kAudioDevicePropertyLatency, scope)
                   + property<UInt32>(id, kAudioDevicePropertySafetyOffset, scope);
@@ -71,7 +90,20 @@ double reportedLatency(AudioDeviceID id, AudioObjectPropertyScope scope, double 
     return frames * 1000.0 / rate;
 }
 void check(OSStatus status, const char *operation) {
-    if (status != noErr) throw std::runtime_error(std::string(operation) + " (Core Audio " + std::to_string(status) + ")");
+    if (status == noErr) return;
+    const auto message = std::string(operation) + " (Core Audio " + std::to_string(status) + ")";
+    switch (status) {
+        case kAudioHardwareNotReadyError:
+        case kAudioHardwareNotRunningError:
+        case kAudioHardwareBadObjectError:
+        case kAudioHardwareBadDeviceError:
+        case kAudioHardwareBadStreamError:
+        case kAudioUnitErr_CannotDoInCurrentContext:
+        case kAudioUnitErr_FailedInitialization:
+            throw DeviceNotReady(message);
+        default:
+            throw std::runtime_error(message);
+    }
 }
 AudioUnit newHAL() {
     AudioComponentDescription desc{kAudioUnitType_Output, kAudioUnitSubType_HALOutput,
@@ -94,7 +126,9 @@ AudioStreamBasicDescription format(double rate, UInt32 channels) {
 
 struct MVEngine {
     AudioUnit input = nullptr, output = nullptr;
-    AudioDeviceID inputID = 0, outputID = 0;
+    DeviceRoute inputRoute{}, outputRoute{}, referenceRoute{};
+    std::atomic<bool> routeDirty{false};
+    std::atomic<uint64_t> deviceListGeneration{0};
     double inRate = 0, outRate = 0, ticksToNS = 0;
     double inputDeviceLatency = 0, outputDeviceLatency = 0;
     UInt32 inChannels = 0, selectedChannel = 0, outChannels = 0, inBuffer = 0, outBuffer = 0;
@@ -152,7 +186,7 @@ struct MVEngine {
         prepared.set_value(true);
         std::array<float, 480> block{}, referenceLeft{}, referenceRight{};
         uint64_t previousDrops = 0, waitingSince = 0;
-        double expectedHostNS = 0, hostNS = 0;
+        double hostNS = 0;
         bool held = false, synchronized = false;
         const auto failReference = [&] {
             echoState = 3; lastError = MVErrorEchoReferenceUnavailable;
@@ -163,7 +197,7 @@ struct MVEngine {
                 echoState = 3; lastError = MVErrorEchoProcessing; return false;
             }
             if (playback) mv_playback_discard(playback.get());
-            held = false; synchronized = false; waitingSince = 0; expectedHostNS = 0;
+            held = false; synchronized = false; waitingSince = 0;
             echoState = echoEnabled() ? 1 : 0;
             transport.markDiscontinuity();
             return true;
@@ -188,12 +222,12 @@ struct MVEngine {
             }
             while (!workerStop.load(std::memory_order_acquire)) {
                 if (!held) {
-                    if (!pendingCapture.pop(block.data(), 480, hostNS)) break;
-                    // A gap invalidates every processor's temporal history.
-                    if (expectedHostNS > 0 && hostNS > 0 && std::abs(hostNS - expectedHostNS) > 2e9 / inRate) {
+                    const auto result = pendingCapture.pop(block.data(), block.size(), hostNS);
+                    if (result == mv::CaptureQueue::Read::waiting) break;
+                    if (result == mv::CaptureQueue::Read::gap) {
                         if (!reset()) return;
+                        continue;
                     }
-                    expectedHostNS = hostNS > 0 ? hostNS + 480e9 / inRate : 0;
                     held = true;
                 }
                 if (playback) {
@@ -230,12 +264,27 @@ struct MVEngine {
         }
     }
 
-    static OSStatus deviceEvent(AudioObjectID, UInt32, const AudioObjectPropertyAddress *, void *context) {
-        static_cast<MVEngine *>(context)->changed.store(true, std::memory_order_release);
+    bool activeRouteChanged() const {
+        if (deviceRoute(inputRoute.id, kAudioObjectPropertyScopeInput) != inputRoute ||
+            deviceRoute(outputRoute.id, kAudioObjectPropertyScopeOutput) != outputRoute) return true;
+        if (!playback) return false;
+        const auto id = property<AudioDeviceID>(kAudioObjectSystemObject, kAudioHardwarePropertyDefaultOutputDevice);
+        return id != referenceRoute.id || deviceRoute(id, kAudioObjectPropertyScopeOutput) != referenceRoute;
+    }
+    static OSStatus deviceEvent(AudioObjectID object, UInt32 count,
+                                const AudioObjectPropertyAddress *addresses, void *context) {
+        auto &engine = *static_cast<MVEngine *>(context);
+        if (object == kAudioObjectSystemObject) {
+            for (UInt32 i = 0; i < count; ++i)
+                if (addresses[i].mSelector == kAudioHardwarePropertyDevices)
+                    engine.deviceListGeneration.fetch_add(1, std::memory_order_relaxed);
+        }
+        engine.routeDirty.store(true, std::memory_order_release);
         return noErr;
     }
-    void listen(AudioObjectID object, AudioObjectPropertySelector key) {
-        auto a = addr(key);
+    void listen(AudioObjectID object, AudioObjectPropertySelector key,
+                AudioObjectPropertyScope scope = kAudioObjectPropertyScopeGlobal) {
+        auto a = addr(key, scope);
         if (AudioObjectAddPropertyListener(object, &a, deviceEvent, this) == noErr)
             listeners.push_back({object, a});
     }
@@ -259,7 +308,7 @@ struct MVEngine {
         const double hostNS = time && (time->mFlags & kAudioTimeStampHostTimeValid)
             ? time->mHostTime * e.ticksToNS : 0;
         if (e.processingEnabled()) {
-            e.pendingCapture.push(samples, count, hostNS, e.inRate);
+            e.pendingCapture.push(samples, count, hostNS);
             semaphore_signal(e.workerWake);
         } else {
             e.transport.push(samples, count, hostNS);
@@ -272,9 +321,11 @@ struct MVEngine {
         auto &e = *static_cast<MVEngine *>(context);
         if (!data) return noErr;
         *flags &= ~kAudioUnitRenderAction_OutputIsSilence;
-        for (UInt32 c = 0; c < data->mNumberBuffers; ++c)
-            if (data->mBuffers[c].mData) std::memset(data->mBuffers[c].mData, 0, data->mBuffers[c].mDataByteSize);
         if (count > maxFrames) {
+            for (UInt32 c = 0; c < data->mNumberBuffers; ++c) {
+                auto &b = data->mBuffers[c];
+                if (b.mData) std::memset(b.mData, 0, b.mDataByteSize);
+            }
             e.lastError.store(kAudioUnitErr_TooManyFramesToProcess);
             *flags |= kAudioUnitRenderAction_OutputIsSilence;
             return noErr;
@@ -307,9 +358,12 @@ struct MVEngine {
             auto &b = data->mBuffers[c];
             if (b.mData && b.mNumberChannels == 1 && b.mDataByteSize >= count * sizeof(float))
                 std::memcpy(b.mData, e.mono.data(), count * sizeof(float));
-            else if (b.mData) e.lastError.store(kAudioUnitErr_FormatNotSupported);
+            else if (b.mData) {
+                std::memset(b.mData, 0, b.mDataByteSize);
+                e.lastError.store(kAudioUnitErr_FormatNotSupported);
+            }
         }
-        if (!info.valid || (wantedGain == 0 && e.gain == 0)) *flags |= kAudioUnitRenderAction_OutputIsSilence;
+        if (peak == 0) *flags |= kAudioUnitRenderAction_OutputIsSilence;
         e.outputPeak.store(peak, std::memory_order_relaxed);
         e.rendered.fetch_add(count, std::memory_order_relaxed);
         return noErr;
@@ -388,22 +442,31 @@ extern "C" int mv_set_deepfilter_acceleration(MVEngine *e, int enabled) {
 
 extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32_t channel,
                           char *error, size_t errorCapacity) {
-    if (!e) return -1;
+    if (!e) return MVStartFailed;
     e->stop();
+    int failureCode = MVStartFailed;
     try {
         if (inputID == outputID) throw std::runtime_error("Input and output must be different devices to avoid a feedback loop.");
-        if (property<UInt32>(outputID, kAudioDevicePropertyTransportType) != kAudioDeviceTransportTypeVirtual)
-            throw std::runtime_error("Choose a virtual output such as BlackHole. Speaker monitoring is not part of this baseline.");
-        e->inputID = inputID; e->outputID = outputID; e->selectedChannel = channel;
-        e->inChannels = channelCount(inputID, kAudioObjectPropertyScopeInput);
-        e->outChannels = std::min(UInt32(2), channelCount(outputID, kAudioObjectPropertyScopeOutput));
-        e->inRate = property<Float64>(inputID, kAudioDevicePropertyNominalSampleRate);
-        e->outRate = property<Float64>(outputID, kAudioDevicePropertyNominalSampleRate);
-        e->inBuffer = property<UInt32>(inputID, kAudioDevicePropertyBufferFrameSize);
-        e->outBuffer = property<UInt32>(outputID, kAudioDevicePropertyBufferFrameSize);
+        e->inputRoute = deviceRoute(inputID, kAudioObjectPropertyScopeInput);
+        e->outputRoute = deviceRoute(outputID, kAudioObjectPropertyScopeOutput);
+        for (const auto *route : {&e->inputRoute, &e->outputRoute}) {
+            if (!route->alive || route->uid.empty() || !route->channels || !route->buffer || route->rate == 0)
+                throw DeviceNotReady("The selected audio device is not ready.");
+        }
+        const auto transportType = property<UInt32>(outputID, kAudioDevicePropertyTransportType);
+        if (!transportType) throw DeviceNotReady("The virtual output is not ready.");
+        if (transportType != kAudioDeviceTransportTypeVirtual)
+            throw std::runtime_error("Choose a virtual output such as BlackHole.");
+        e->selectedChannel = channel;
+        e->inChannels = e->inputRoute.channels;
+        e->outChannels = std::min(UInt32(2), e->outputRoute.channels);
+        e->inRate = e->inputRoute.rate;
+        e->outRate = e->outputRoute.rate;
+        e->inBuffer = e->inputRoute.buffer;
+        e->outBuffer = e->outputRoute.buffer;
         if (!e->inChannels || e->inChannels > 64 || channel >= e->inChannels || !e->outChannels)
             throw std::runtime_error("The selected device channels are unavailable.");
-        if (e->inRate < 8000 || e->inRate > 192000 || e->outRate < 8000 || e->outRate > 192000)
+        if (!std::isfinite(e->inRate) || !std::isfinite(e->outRate) || e->inRate < 8000 || e->inRate > 192000 || e->outRate < 8000 || e->outRate > 192000)
             throw std::runtime_error("This baseline supports device rates from 8 to 192 kHz.");
         if (e->processingEnabled() && e->inRate != 48000)
             throw std::runtime_error("Noise suppression currently requires a 48 kHz microphone. Set it to 48,000 Hz in Audio MIDI Setup, or turn Echo, Room de-reverb, WebRTC and Enhanced off.");
@@ -416,6 +479,7 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
             MVPlaybackInfo info{}; mv_playback_info(e->playback.get(), &info);
             if (!info.buffer_frames || info.buffer_frames > maxFrames)
                 throw std::runtime_error("Echo playback buffer is unavailable or too large.");
+            e->referenceRoute = deviceRoute(info.device_id, kAudioObjectPropertyScopeOutput);
             e->referenceHeadroom = UInt32(std::ceil(info.buffer_frames * e->inRate / info.sample_rate));
         }
         const double block = std::max(double(e->inBuffer), e->outBuffer * e->inRate / e->outRate);
@@ -425,7 +489,7 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
         // the USB callback, worker, and virtual device do not drain the queue.
         const UInt32 workerHeadroom = e->processingEnabled() ? 480 : 0;
         const auto target = UInt32(std::ceil(std::max(sourceBlock * 2, e->inRate * 0.005)))
-            + mv::Transport::taps + workerHeadroom + e->referenceHeadroom;
+            + mv::Transport::filterLength(e->inRate, e->outRate) + workerHeadroom + e->referenceHeadroom;
         if (target > mv::Transport::capacity / 4 || !e->inBuffer || !e->outBuffer)
             throw std::runtime_error("The device buffer is too large or unavailable. Choose smaller buffers in the device settings.");
         e->transport.configure(e->inRate, e->outRate, target);
@@ -443,7 +507,7 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
         e->latency = 0; e->maxLatency = 0; e->queue = 0; e->ppm = 0; e->inputPeak = 0; e->outputPeak = 0;
         e->lastError = 0; e->changed = false; e->gain = e->muted ? 0 : 1;
         e->deepFilterBackend = 0; e->deepFilterDevices = 0; e->dpdfDevices = 0; e->localVQEThreads = 0;
-        e->pendingCapture.reset();
+        e->pendingCapture.reset(e->inRate);
         e->nsBlocks = 0; e->nsNanos = 0; e->nsMaxNanos = 0;
         for (auto &bin : e->computeHistogram) bin = 0;
         if (e->processingEnabled()) {
@@ -484,9 +548,12 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
             e->listen(id, kAudioDevicePropertyNominalSampleRate);
             e->listen(id, kAudioDevicePropertyBufferFrameSize);
         }
+        e->listen(inputID, kAudioDevicePropertyStreamConfiguration, kAudioObjectPropertyScopeInput);
+        e->listen(outputID, kAudioDevicePropertyStreamConfiguration, kAudioObjectPropertyScopeOutput);
         if (e->playback) {
             MVPlaybackInfo info{}; mv_playback_info(e->playback.get(), &info);
             e->listen(kAudioObjectSystemObject, kAudioHardwarePropertyDefaultOutputDevice);
+            e->listen(info.device_id, kAudioDevicePropertyStreamConfiguration, kAudioObjectPropertyScopeOutput);
             e->listen(info.device_id, kAudioDevicePropertyDeviceIsAlive);
             e->listen(info.device_id, kAudioDevicePropertyNominalSampleRate);
             e->listen(info.device_id, kAudioDevicePropertyBufferFrameSize);
@@ -497,19 +564,26 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
         e->listen(kAudioObjectSystemObject, kAudioHardwarePropertyDevices);
         check(AudioOutputUnitStart(e->input), "Start microphone");
         check(AudioOutputUnitStart(e->output), "Start virtual output");
+        e->routeDirty = true; // Also check events between taking snapshots and installing listeners.
         e->running = true;
-        return 0;
-    } catch (const std::exception &failure) {
-        e->stop();
+        return MVStartOK;
+    } catch (const DeviceNotReady &failure) {
+        failureCode = MVStartDeviceNotReady;
         if (error && errorCapacity) std::snprintf(error, errorCapacity, "%s", failure.what());
-        return -1;
+    } catch (const std::exception &failure) {
+        if (error && errorCapacity) std::snprintf(error, errorCapacity, "%s", failure.what());
     }
+    e->stop();
+    return failureCode;
 }
 
 extern "C" void mv_stats(MVEngine *e, MVStats *s) {
     if (!e || !s) return;
     *s = {};
     s->running = e->running; s->latency_valid = e->latencyValid;
+    if (s->running && e->routeDirty.exchange(false, std::memory_order_acq_rel) && e->activeRouteChanged())
+        e->changed = true;
+    s->device_list_generation = e->deviceListGeneration.load(std::memory_order_relaxed);
     s->device_changed = e->changed; s->last_error = e->lastError;
     s->input_rate = e->inRate; s->output_rate = e->outRate;
     s->input_buffer_frames = e->inBuffer; s->output_buffer_frames = e->outBuffer;

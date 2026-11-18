@@ -16,6 +16,7 @@ typedef struct {
 typedef struct {
     int running, latency_valid, device_changed;
     int32_t last_error;
+    uint64_t device_list_generation; // Changes to device inventory, including unrelated devices.
     double input_rate, output_rate, queue_ms, target_queue_ms;
     double latency_ms, latency_p50_ms, latency_p95_ms, latency_max_ms;
     double drift_ppm, input_peak, output_peak;
@@ -43,6 +44,9 @@ typedef struct {
 } MVStats;
 
 enum { MVErrorEchoReferenceUnavailable = -100001, MVErrorEchoProcessing = -100002 };
+
+// Start results distinguish a device becoming available from configuration/permission failures.
+enum { MVStartOK = 0, MVStartFailed = -1, MVStartDeviceNotReady = -2 };
 
 // Control-thread API. Enumeration and lifecycle functions are never callback-safe.
 int mv_devices(MVDevice *devices, int capacity);

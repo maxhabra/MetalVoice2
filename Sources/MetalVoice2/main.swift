@@ -12,7 +12,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NSApp.setActivationPolicy(.accessory)
         audio = AudioController()
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "MetalVoice2")
+        if let mark = NSImage(named: "VoiceMark")?.copy() as? NSImage {
+            mark.size = NSSize(width: 22, height: 22 * mark.size.height / mark.size.width)
+            mark.isTemplate = true
+            item.button?.image = mark
+        } else {
+            item.button?.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "MetalVoice2")
+        }
+        item.button?.setAccessibilityLabel("MetalVoice2")
         item.button?.toolTip = "MetalVoice2 — click for controls, right-click for quick actions"
         item.button?.target = self
         item.button?.action = #selector(statusItemClicked)

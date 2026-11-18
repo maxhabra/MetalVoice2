@@ -34,6 +34,10 @@ mkdir -p "$bundle/Contents/MacOS"
 cp -X "$binary_dir/MetalVoice2" "$bundle/Contents/MacOS/MetalVoice2"
 cp Resources/Info.plist "$bundle/Contents/Info.plist"
 mkdir -p "$bundle/Contents/Resources/Licenses/LocalVQE"
+cp -X Resources/Brand/AppIcon.icns Resources/Brand/VoiceMark.png "$bundle/Contents/Resources/"
+# The panel uses this logo at 122 points wide. Ship a Retina-sized copy.
+sips -Z 366 Resources/Brand/MetalVoice2-logo.png \
+    --out "$bundle/Contents/Resources/MetalVoice2-logo.png" >/dev/null
 cp -X Resources/localvqe-v1.3-4.8M-f32.gguf "$bundle/Contents/Resources/"
 cp -X ThirdParty/LocalVQE/upstream/LICENSE ThirdParty/LocalVQE/README.md ThirdParty/LocalVQE/SOURCE_MANIFEST.json "$bundle/Contents/Resources/Licenses/LocalVQE/"
 cp -X ThirdParty/LocalVQE/upstream/ggml/vendor/ggml/LICENSE "$bundle/Contents/Resources/Licenses/LocalVQE/GGML-LICENSE"

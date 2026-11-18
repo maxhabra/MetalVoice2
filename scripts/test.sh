@@ -22,6 +22,12 @@ for product in transport-tests noise-tests coreml-tests dpdf-tests room-tests ae
 done
 swift build "${options[@]}" -c release --product transport-tests
 "$binary_dir/transport-tests"
+clang++ -std=c++20 -dynamiclib Tests/RouteFixture/HAL.cpp -framework AudioToolbox -framework CoreAudio \
+    -framework CoreFoundation -o build/libRouteFixture.dylib
+DYLD_INSERT_LIBRARIES="$PWD/build/libRouteFixture.dylib" "$binary_dir/transport-tests" --route-fixture
+swiftc -module-cache-path build/module-cache -I Sources/AudioCore/include Sources/MetalVoice2/DeviceRecovery.swift \
+    Tests/DeviceRecovery/main.swift -o build/device-recovery-tests
+build/device-recovery-tests
 swift build "${options[@]}" -c release --product noise-tests
 clang -std=c11 -dynamiclib Tests/AllocationTracker.c -o build/libAllocationTracker.dylib
 DYLD_INSERT_LIBRARIES="$PWD/build/libAllocationTracker.dylib" "$binary_dir/noise-tests"
@@ -42,6 +48,8 @@ TMPDIR="$PWD/build/dpdfnet-tmp" DYLD_INSERT_LIBRARIES="$PWD/build/libAllocationT
 swift build "${options[@]}" -c release --product aec-tests
 "$binary_dir/aec-tests"
 
+build/localvqe-env/bin/cmake --build build/localvqe-native --target localvqe-failure-test
+DYLD_INSERT_LIBRARIES="$PWD/build/libAllocationTracker.dylib" GGML_NTHREADS=2 build/localvqe-native/localvqe-failure-test Resources/localvqe-v1.3-4.8M-f32.gguf
 GGML_NTHREADS=2 build/localvqe-native/localvqe-regression \
     --gguf Resources/localvqe-v1.3-4.8M-f32.gguf \
     --input ThirdParty/LocalVQE/upstream/ggml/tests/fixtures/regression_input.f32 \

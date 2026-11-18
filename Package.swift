@@ -15,6 +15,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "MetalVoice2", targets: ["MetalVoice2"]),
+        .executable(name: "quality-render", targets: ["QualityRender"]),
         .executable(name: "transport-tests", targets: ["TransportTests"]),
         .executable(name: "noise-tests", targets: ["NoiseTests"]),
         .executable(name: "coreml-tests", targets: ["CoreMLTests"]),
@@ -61,6 +62,7 @@ let package = Package(
         .executableTarget(name: "MetalVoice2", dependencies: ["AudioCore"], swiftSettings: [.swiftLanguageMode(.v5)], linkerSettings: [
             .linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("AVFoundation")
         ]),
+        .executableTarget(name: "QualityRender", dependencies: ["AudioCore"], path: "Tests/QualityRender"),
         .executableTarget(name: "TransportTests", dependencies: ["AudioCore"], path: "Tests/TransportTests"),
         .executableTarget(name: "NoiseTests", dependencies: ["AudioCore", "WebRTCNS", "RNNoise"], path: "Tests/NoiseTests"),
         .executableTarget(name: "CoreMLTests", dependencies: ["AudioCore", "AppleDF", "WebRTCNS"], path: "Tests/CoreMLTests"),

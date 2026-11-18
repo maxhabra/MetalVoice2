@@ -21,6 +21,7 @@ struct dvqe_graph_model {
 
     // Backend (CPU or CUDA)
     ggml_backend_t backend = nullptr;
+    struct ggml_threadpool* cpu_pool = nullptr;  // MetalVoice2: owned for the model lifetime.
 
     // Weight storage — kept as ggml tensors (may be quantized)
     struct ggml_context* weight_ctx = nullptr;
@@ -146,7 +147,7 @@ bool build_stream_graph(dvqe_graph_model& m, dvqe_stream_graph& sg);
 /// Process one frame. mic/ref are 512-sample PCM windows (50% overlap:
 /// last hop is 256 new samples, first half is previous 256). out is a
 /// 512-sample PCM frame to be overlap-added by the caller.
-void process_frame_graph(dvqe_stream_graph& sg, dvqe_graph_model& m,
+ggml_status process_frame_graph(dvqe_stream_graph& sg, dvqe_graph_model& m,
                          const float* mic_pcm_window,
                          const float* ref_pcm_window,
                          float* enhanced_pcm_window);

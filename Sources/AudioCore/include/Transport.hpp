@@ -4,13 +4,15 @@
 #include <cmath>
 #include <cstdint>
 #include <algorithm>
+#include <vector>
 
 namespace mv {
 // Exactly one capture producer and one render consumer. Reset only with both stopped.
 class Transport {
 public:
     static constexpr uint64_t capacity = 32768;
-    static constexpr int taps = 32, phases = 1024, half = taps / 2;
+    static constexpr int baseTaps = 32, maxPhases = 1024;
+    static uint32_t filterLength(double inputRate, double outputRate);
     struct Frame { float sample = 0; double hostNS = 0; };
     struct RenderInfo {
         bool valid = false;
@@ -32,7 +34,8 @@ private:
     std::atomic<uint64_t> dropped{0};
     std::atomic<uint64_t> epoch{0};
     std::array<Frame, capacity> frames{};
-    std::array<std::array<float, taps>, phases> kernel{};
+    std::vector<float> kernel;
+    int taps = baseTaps, half = baseTaps / 2, phases = maxPhases;
     double inRate = 48000, nominalRatio = 1, cursor = half;
     double filteredError = 0, integral = 0, correction = 0;
     uint32_t targetFrames = 512, fadeRemaining = 128;

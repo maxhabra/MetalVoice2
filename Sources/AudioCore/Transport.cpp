@@ -3,18 +3,30 @@
 #include <numbers>
 
 namespace mv {
+uint32_t Transport::filterLength(double inputRate, double outputRate) {
+    // Keep the original clock-correction kernel at equal rates and for interpolation.
+    // For decimation the transition width in input samples shrinks with the rate ratio.
+    return inputRate <= outputRate ? baseTaps : 2 * uint32_t(std::ceil(40 * inputRate / outputRate));
+}
+
 void Transport::configure(double inputRate, double outputRate, uint32_t target) {
     inRate = inputRate;
     nominalRatio = inputRate / outputRate;
+    taps = int(filterLength(inputRate, outputRate));
+    half = taps / 2;
+    // Phase accuracy is relative to output bandwidth. Keep the coefficient table bounded.
+    phases = int(std::ceil(maxPhases / std::max(1.0, nominalRatio)));
+    kernel.resize(size_t(phases) * taps);
     targetFrames = std::clamp(target, uint32_t(taps * 2), uint32_t(capacity / 4));
     write.store(0); read.store(0); dropped.store(0);
     epoch.store(0); observedEpoch = 0;
     cursor = half; primed = false; fadeRemaining = 128; observedDrops = 0;
     filteredError = integral = correction = 0;
     // Polyphase, Blackman-windowed sinc. Built once, away from audio callbacks.
-    const double cutoff = 0.47 * std::min(1.0, outputRate / inputRate);
+    const double cutoff = nominalRatio > 1 ? 0.45 / nominalRatio : 0.47;
     for (int p = 0; p < phases; ++p) {
         const double frac = double(p) / phases;
+        auto *row = kernel.data() + size_t(p) * taps;
         double sum = 0;
         for (int j = 0; j < taps; ++j) {
             const double x = j - (half - 1) - frac;
@@ -22,10 +34,10 @@ void Transport::configure(double inputRate, double outputRate, uint32_t target) 
             const double sinc = std::abs(a) < 1e-10 ? 1 : std::sin(a) / a;
             const double window = 0.42 - 0.5 * std::cos(2 * std::numbers::pi * j / (taps - 1))
                                 + 0.08 * std::cos(4 * std::numbers::pi * j / (taps - 1));
-            kernel[p][j] = float(2 * cutoff * sinc * window);
-            sum += kernel[p][j];
+            row[j] = float(2 * cutoff * sinc * window);
+            sum += row[j];
         }
-        for (auto &v : kernel[p]) v = float(v / sum);
+        for (int j = 0; j < taps; ++j) row[j] = float(row[j] / sum);
     }
 }
 
@@ -100,9 +112,15 @@ Transport::RenderInfo Transport::render(float *output, uint32_t count) {
         const auto c = uint64_t(cursor);
         const double frac = cursor - c;
         const auto phase = std::min(phases - 1, int(frac * phases));
-        double value = 0;
-        for (int j = 0; j < taps; ++j)
-            value += frames[(c - (half - 1) + j) % capacity].sample * kernel[phase][j];
+        const auto *row = kernel.data() + size_t(phase) * taps;
+        const uint64_t first = c - (half - 1);
+        const auto convolve = [&](int length) {
+            double sum = 0;
+            for (int j = 0; j < length; ++j)
+                sum += frames[(first + j) % capacity].sample * row[j];
+            return sum;
+        };
+        double value = taps == baseTaps ? convolve(baseTaps) : convolve(taps);
         if (fadeRemaining) { value *= (128 - fadeRemaining) / 128.0; --fadeRemaining; }
         output[i] = float(value);
         cursor += ratio;

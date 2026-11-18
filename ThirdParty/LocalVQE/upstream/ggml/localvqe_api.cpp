@@ -439,7 +439,7 @@ static void build_window(std::vector<float>& hist, const float* new_hop,
 // COLA=1 sqrt-Hann² codec lands the next hop's first sample at full
 // synthesis-window peak, so emitting zeros for the first hop and
 // peak-amplitude content for the second creates an audible step.
-static void stream_one_frame(localvqe_ctx* ctx, const float* mic,
+static int stream_one_frame(localvqe_ctx* ctx, const float* mic,
                              const float* ref, float* out) {
     auto& hp = ctx->graph_model.hparams;
     int n_fft = hp.n_fft;
@@ -455,7 +455,7 @@ static void stream_one_frame(localvqe_ctx* ctx, const float* mic,
             localvqe::apply_noise_gate(out, hop,
                                        ctx->noise_gate_threshold_dbfs);
         }
-        return;
+        return 0;
     }
 
     if (ctx->daf.loaded) {
@@ -467,9 +467,16 @@ static void stream_one_frame(localvqe_ctx* ctx, const float* mic,
     build_window(ctx->pcm_hist_mic, mic, hop, ctx->mic_window.data());
     build_window(ctx->pcm_hist_ref, ref, hop, ctx->ref_window.data());
 
-    process_frame_graph(ctx->stream_graph, ctx->graph_model,
-                        ctx->mic_window.data(), ctx->ref_window.data(),
-                        ctx->enh_window.data());
+    const auto status = process_frame_graph(ctx->stream_graph, ctx->graph_model,
+                                            ctx->mic_window.data(), ctx->ref_window.data(),
+                                            ctx->enh_window.data());
+    if (status != GGML_STATUS_SUCCESS) {
+        // A backend may have executed part of the graph, including in-place writes.
+        localvqe_reset(reinterpret_cast<localvqe_ctx_t>(ctx));
+        std::fill_n(out, hop, 0.0f);
+        ctx->last_error = ggml_status_to_string(status);
+        return -1;
+    }
 
     // OLA scale below: v1's DCT codec has no analysis window so the two
     // overlapping frame contributions must be halved; v1.1's sqrt-Hann²
@@ -487,6 +494,7 @@ static void stream_one_frame(localvqe_ctx* ctx, const float* mic,
     std::memmove(ctx->ola.data(), ctx->ola.data() + hop,
                  (n_fft - hop) * sizeof(float));
     std::memset(ctx->ola.data() + (n_fft - hop), 0, hop * sizeof(float));
+    return 0;
 }
 
 #ifdef LOCALVQE_HAS_GTCRN
@@ -661,10 +669,10 @@ LOCALVQE_API int localvqe_process_f32(localvqe_ctx_t handle,
 
     int n_frames = n_samples / hop;  // drop the trailing partial hop
     for (int t = 0; t < n_frames; t++) {
-        stream_one_frame(ctx,
-                         mic + t * hop,
-                         ref + t * hop,
-                         out + t * hop);
+        if (stream_one_frame(ctx, mic + t * hop, ref + t * hop, out + t * hop) != 0) {
+            std::fill_n(out, n_samples, 0.0f);
+            return -1;
+        }
     }
     int tail = n_samples - n_frames * hop;
     if (tail > 0) std::memset(out + n_frames * hop, 0, tail * sizeof(float));
@@ -744,8 +752,7 @@ LOCALVQE_API int localvqe_process_frame_f32(localvqe_ctx_t handle,
     }
 #endif
     if (hop_samples != ctx->graph_model.hparams.hop_length) return -2;
-    stream_one_frame(ctx, mic, ref, out);
-    return 0;
+    return stream_one_frame(ctx, mic, ref, out);
 }
 
 LOCALVQE_API int localvqe_process_frame_s16(localvqe_ctx_t handle,
