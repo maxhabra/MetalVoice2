@@ -399,9 +399,17 @@ final class AudioController: ObservableObject {
             mv_set_enhanced_suppression(self.engine, enhancedMode)
             var message = [CChar](repeating: 0, count: 1024)
             mv_set_voice(self.engine, voice?.python, voice?.worker, voice?.config, UInt32(preset?.chunk ?? 0))
-            let result = mv_start(self.engine, input.id, output.id, selectedChannel, &message, message.count)
-            let speakerCount = Int(mv_voice_speaker_count(self.engine))
-            let failure = String(cString: message)
+            let result: Int32
+            var verificationError: String?
+            do {
+                if voice != nil { try VoiceRuntime.verify() }
+                result = mv_start(self.engine, input.id, output.id, selectedChannel, &message, message.count)
+            } catch {
+                verificationError = error.localizedDescription
+                result = Int32(MVStartFailed)
+            }
+            let speakerCount = verificationError == nil ? Int(mv_voice_speaker_count(self.engine)) : 0
+            let failure = verificationError ?? String(cString: message)
             DispatchQueue.main.async {
                 guard token == self.generation else { return }
                 self.busy = false

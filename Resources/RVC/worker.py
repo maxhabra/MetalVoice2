@@ -1,8 +1,10 @@
 """Private 48 kHz mono float32 pipe used by the macOS preview."""
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import stat
 import sys
 
 # Keep library diagnostics off the PCM channel, including native writes to stdout.
@@ -15,6 +17,23 @@ def lowpass(hz, rate, taps):
     x = np.arange(taps) - taps // 2
     h = np.sinc(x * 2 * hz / rate) * np.hanning(taps)
     return (h / h.sum()).astype(np.float32)
+
+
+def authenticated_index(path, expected):
+    if not isinstance(expected, str) or len(expected) != 64:
+        raise ValueError("Attach the index with the SHA-256 supplied by its trusted publisher.")
+    # Hash and parse the same bounded snapshot so replacing the path cannot change the bytes.
+    limit = 512 * 1024**2
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as source:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= limit:
+            raise ValueError("Expected a regular retrieval index of at most 512 MiB.")
+        data = source.read(info.st_size)
+        if len(data) != info.st_size or source.read(1) or hashlib.sha256(data).hexdigest() != expected:
+            raise ValueError("Retrieval index does not match the trusted SHA-256.")
+    import faiss
+    return faiss.deserialize_index(np.frombuffer(data, dtype=np.uint8))
 
 
 class Converter:
@@ -50,6 +69,9 @@ class Converter:
         model = Path(cfg["model"])
         if model.stat().st_size > 512 * 1024**2:
             raise ValueError("Expected an exported RVC inference checkpoint under 512 MiB")
+        from packaging.version import Version
+        if Version(torch.__version__) < Version("2.10.0"):
+            raise ValueError("Install the updated MetalVoice2 voice runtime (PyTorch 2.10 or later).")
         weights = torch.load(model, map_location="cpu", weights_only=True)
         version = weights.get("version", "v1")
         if version not in ("v1", "v2") or not weights.get("f0", True):
@@ -101,8 +123,7 @@ class Converter:
         self.index = None
         self.mix = spec["indexStrength"] / 100
         if cfg.get("index") and self.mix:
-            import faiss
-            self.index = faiss.read_index(cfg["index"])
+            self.index = authenticated_index(cfg["index"], cfg.get("indexSHA256"))
             if self.index.d != (256 if version == "v1" else 768) or not self.index.ntotal:
                 raise ValueError("Retrieval index does not match this voice")
 
@@ -166,11 +187,14 @@ class Converter:
 if __name__ == "__main__":
     ready = False
     try:
+        config = json.loads(sys.argv[1])
+        from isolation import confine
+        confine(config)
         import numpy as np
         import onnxruntime as ort
         import torch
         with torch.inference_mode():
-            converter = Converter(json.loads(sys.argv[1]))
+            converter = Converter(config)
             # Warm lazy kernels before hardware capture starts.
             converter.convert(np.full(converter.chunk, 0.01, np.float32), warmup=True)
             converter.history.fill(0)

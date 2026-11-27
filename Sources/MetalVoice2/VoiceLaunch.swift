@@ -8,6 +8,7 @@ struct VoiceLaunch {
     private struct Configuration: Encodable {
         var model: String
         var index: String?
+        var indexSHA256: String?
         var assets: String
         var preset: VoicePreset
         let reportSpeakerCount = true
@@ -20,15 +21,12 @@ struct VoiceLaunch {
         guard let voice, FileManager.default.isReadableFile(atPath: voice.model.path) else {
             throw failure("Select a readable .pth voice or turn Voice changer off.")
         }
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        python = support.appendingPathComponent("MetalVoice2/RVC/venv/bin/python3").path
+        let root = VoiceRuntime.root
+        python = root.appendingPathComponent("python/bin/python3.11").path
+        worker = root.appendingPathComponent("Contents/Resources/RVC/worker.py").path
         guard FileManager.default.isExecutableFile(atPath: python) else {
-            throw failure("Install the local voice runtime using scripts/setup_voice_runtime.sh.")
+            throw failure("Install the protected voice runtime using setup_voice_runtime.sh.")
         }
-        guard let helper = Bundle.main.url(forResource: "worker", withExtension: "py", subdirectory: "RVC") else {
-            throw failure("This app is missing its RVC worker.")
-        }
-        worker = helper.path
         var folder = voice.model.deletingLastPathComponent()
         var candidates: [URL] = []
         if let chosen = UserDefaults.standard.string(forKey: "rvcAssetsFolder"), !chosen.isEmpty {
@@ -47,7 +45,9 @@ struct VoiceLaunch {
         }) else {
             throw failure("Click Model assets… and select the modules folder from VCClient.")
         }
-        let data = try JSONEncoder().encode(Configuration(model: voice.model.path, index: voice.index?.path,
+        let data = try JSONEncoder().encode(Configuration(model: voice.model.path,
+                                                          index: voice.indexSHA256 == nil ? nil : voice.index?.path,
+                                                          indexSHA256: voice.indexSHA256,
                                                           assets: assets.path, preset: voice.preset))
         config = String(decoding: data, as: UTF8.self)
     }

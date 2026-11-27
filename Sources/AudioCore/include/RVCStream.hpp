@@ -18,7 +18,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <crt_externs.h>
+#include <libproc.h>
 
 namespace mv {
 // Control queue owns process lifetime. Only the cleanup worker exchanges PCM.
@@ -69,10 +69,14 @@ public:
         posix_spawnattr_t attrs;
         posix_spawnattr_init(&attrs);
         posix_spawnattr_setflags(&attrs, POSIX_SPAWN_CLOEXEC_DEFAULT);
-        posix_spawn_file_actions_addinherit_np(&actions, STDERR_FILENO);
-        const char *args[] = {python.c_str(), "-I", "-B", script.c_str(), config.c_str(), nullptr};
+        // Keep caller environment, writable log descriptors and cwd out of Python.
+        posix_spawn_file_actions_addchdir_np(&actions, "/");
+        posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+        const char *args[] = {python.c_str(), "-I", "-B", "-S", script.c_str(), config.c_str(), nullptr};
         pid_t pid;
-        int err = posix_spawn(&pid, python.c_str(), &actions, &attrs, const_cast<char**>(args), *_NSGetEnviron());
+        char path[] = "PATH=/usr/bin:/bin", home[] = "HOME=/var/empty", threads[] = "OMP_NUM_THREADS=3";
+        char *env[] = {path, home, threads, nullptr};
+        int err = posix_spawn(&pid, python.c_str(), &actions, &attrs, const_cast<char**>(args), env);
         posix_spawnattr_destroy(&attrs);
         posix_spawn_file_actions_destroy(&actions);
         close(sockets[1]);
@@ -82,6 +86,10 @@ public:
         std::string line;
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(45);
         while (line.size() < 512 && std::chrono::steady_clock::now() < deadline) {
+            rusage_info_v2 usage{};
+            if (proc_pid_rusage(child, RUSAGE_INFO_V2, reinterpret_cast<rusage_info_t *>(&usage)) == 0 &&
+                usage.ri_phys_footprint > (uint64_t(4) << 30))
+                throw std::runtime_error("Voice model loading exceeded the 4 GiB memory budget.");
             int ready = poll(&p, 1, 250);
             if (ready < 0 && errno != EINTR) break;
             if (ready <= 0) continue;

@@ -31,6 +31,7 @@ struct VoicePreset: Codable, Equatable {
 struct VoiceEntry: Identifiable, Codable {
     let model: URL
     var index: URL?
+    var indexSHA256: String?
     var preset = VoicePreset()
     var speakerCount: Int?
     var id: URL { model }
@@ -77,8 +78,7 @@ final class VoiceLibrary: ObservableObject {
         for file in files {
             let url = try checked(file, extension: "pth")
             if !updated.voices.contains(where: { $0.id == url }) {
-                let sibling = url.deletingPathExtension().appendingPathExtension("index")
-                updated.voices.append(VoiceEntry(model: url, index: try? checked(sibling, extension: "index")))
+                updated.voices.append(VoiceEntry(model: url))
             }
             updated.selection = url
         }
@@ -92,9 +92,17 @@ final class VoiceLibrary: ObservableObject {
         save(updated)
     }
 
-    func attach(_ file: URL?) throws {
+    func attach(_ file: URL?, sha256: String = "") throws {
         let index = try file.map { try checked($0, extension: "index") }
-        updateSelected { $0.index = index }
+        let digest = sha256.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if index != nil && !(digest.utf8.count == 64 && digest.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }) {
+            throw NSError(domain: "MetalVoice2.Index", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Enter the 64-character SHA-256 from a trusted publisher."])
+        }
+        updateSelected {
+            $0.index = index
+            $0.indexSHA256 = index == nil ? nil : digest
+        }
     }
 
     func setSpeakerCount(_ count: Int, for model: URL) {

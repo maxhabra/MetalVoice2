@@ -100,7 +100,7 @@ struct VoiceChangerView: View {
                 Button("Detach") { try? library.attach(nil); audio.reloadVoice() }
                     .panelHelp("Unlink the index from this voice.")
             }
-            Button(library.selected?.index == nil ? "Attach .index…" : "Replace…") { choose(index: true) }
+            Button(library.selected?.index == nil ? "Attach .index…" : (library.selected?.indexSHA256 == nil ? "Verify index…" : "Replace…")) { choose(index: true) }
                 .panelHelp("Choose the retrieval index trained for this voice.")
                 .disabled(library.selected == nil)
         }
@@ -108,7 +108,7 @@ struct VoiceChangerView: View {
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 7) {
             row("Pitch", \.pitch, -24...24, 1, "st", help: "Raise or lower the converted voice in semitones.")
             row("Index blend", \.indexStrength, 0...100, 1, "%", help: "Blend in features from the attached voice index.")
-                .disabled(library.selected?.index == nil)
+                .disabled(library.selected?.indexSHA256 == nil)
             row("Chunk", \.chunk, 50...1000, 10, "ms", help: "New audio collected per conversion. Smaller chunks reduce waiting time.")
             row("Extra history", \.extra, 0...1500, 10, "ms", help: "Earlier audio the model uses as context for each chunk.")
             row("Noise gate", \.gate, -120...0, 1, "dBFS", off: -120, help: "Set how quiet the input can be before conversion goes silent.")
@@ -164,10 +164,19 @@ struct VoiceChangerView: View {
         panel.allowedContentTypes = [UTType(filenameExtension: ext) ?? .data]
         panel.allowsMultipleSelection = !index
         panel.title = index ? "Attach retrieval index" : "Import RVC voices"
-        panel.message = "Files stay in their current location."
+        let checksum = NSTextField(frame: NSRect(x: 0, y: 0, width: 400, height: 24))
+        if index {
+            checksum.placeholderString = "Publisher’s SHA-256"
+            checksum.setAccessibilityLabel("Publisher’s SHA-256")
+            panel.accessoryView = checksum
+            panel.isAccessoryViewDisclosed = true
+            panel.message = "Paste the SHA-256 from a trusted source for this index. Leave the index detached if you cannot verify it."
+        } else {
+            panel.message = "Files stay in their current location."
+        }
         guard presentPanel(panel) == .OK else { return }
         do {
-            if index, let url = panel.url { try library.attach(url) }
+            if index, let url = panel.url { try library.attach(url, sha256: checksum.stringValue) }
             else { try library.add(panel.urls) }
             audio.reloadVoice()
             fileError = nil

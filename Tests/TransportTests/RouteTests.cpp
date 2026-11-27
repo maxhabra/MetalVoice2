@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
 #include <thread>
 #include <mach/mach_time.h>
 #include <dlfcn.h>
@@ -78,7 +79,8 @@ void routeTests() {
     require(start() == MVStartOK, "Reconnected mic should reopen");
     mv_stop(engine.get());
     mv_set_muted(engine.get(), 0);
-    mv_set_voice(engine.get(), "/usr/bin/python3", "Tests/RouteFixture/voice_worker.py", "{}", 100);
+    const auto worker = std::filesystem::absolute("Tests/RouteFixture/voice_worker.py");
+    mv_set_voice(engine.get(), "/usr/bin/python3", worker.c_str(), "{}", 100);
     require(start() == MVStartOK, "Voice worker failed to start");
     require(mv_voice_speaker_count(engine.get()) == 3, "Expected speaker count from the worker");
     auto audio = reinterpret_cast<void (*)(const float *, uint64_t, float *)>(dlsym(RTLD_DEFAULT, "mv_fixture_audio"));

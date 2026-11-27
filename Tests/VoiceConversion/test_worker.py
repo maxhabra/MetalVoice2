@@ -1,4 +1,4 @@
-"""Run with the RVC venv after building the app: test_worker.py MODEL.pth MODULES_DIR."""
+"""Run with the RVC runtime Python after building the app: test_worker.py MODEL.pth MODULES_DIR."""
 import argparse
 import json
 from pathlib import Path
@@ -13,8 +13,8 @@ def run_worker(worker, model, assets, method, speaker_id, audio, gate=-120):
                   indexStrength=0, f0=method)
     if speaker_id is not None:
         preset["speakerID"] = speaker_id
-    config = dict(model=str(model), assets=str(assets), preset=preset, reportSpeakerCount=True)
-    proc = subprocess.run([sys.executable, "-I", "-B", str(worker), json.dumps(config)],
+    config = dict(model=str(model.resolve()), assets=str(assets.resolve()), preset=preset, reportSpeakerCount=True)
+    proc = subprocess.run([sys.executable, "-I", "-B", "-S", str(worker), json.dumps(config)],
                           input=audio.tobytes(), capture_output=True, timeout=90)
     metadata, _, response = proc.stdout.partition(b"\n")
     assert metadata.startswith(b"SPEAKERS "), proc.stderr.decode(errors="replace")
