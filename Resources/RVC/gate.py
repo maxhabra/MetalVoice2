@@ -16,7 +16,9 @@ class GateHold:
 
     def window(self, block):
         """Keep the mask on the same input timeline as the decoder's overlap/search window."""
-        frames = block.reshape(-1, self.hop)
+        # Zero hold uses the original whole-chunk RMS decision. Both modes ramp
+        # the resulting mask on the same sample timeline as the decoded audio.
+        frames = block.reshape(-1, self.hop if self.hold else block.size)
         above = np.mean(frames * frames, axis=1) >= self.threshold_squared
         mask = np.zeros_like(frames)
         for i, voiced in enumerate(above):

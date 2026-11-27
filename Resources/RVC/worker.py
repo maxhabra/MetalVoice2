@@ -38,7 +38,7 @@ class Converter:
         window = extra + self.chunk + self.overlap + self.search
         self.history = np.zeros(math.ceil(window / 480) * 480, np.float32)
         self.pitch_scale = 2 ** (float(spec["pitch"]) / 12)
-        self.gate = 0 if spec["gate"] <= -120 else 10 ** (spec["gate"] / 20)
+        threshold = 0 if spec["gate"] <= -120 else 10 ** (spec["gate"] / 20)
         self.down = lowpass(7600, 48000, 95)
         self.hp = lowpass(spec["highPass"], 48000, 511) if 20 < spec["highPass"] else None
         self.lp = lowpass(spec["lowPass"], 48000, 127) if spec["lowPass"] < 20000 else None
@@ -46,7 +46,7 @@ class Converter:
         hold_ms = spec.get("gateHoldMS", 0)
         if not 0 <= hold_ms <= 2000:
             raise ValueError("Gate hold must be between 0 and 2000 ms")
-        self.hold = GateHold(self.gate, hold_ms, self.overlap + self.search) if self.gate and hold_ms else None
+        self.gate = GateHold(threshold, hold_ms, self.overlap + self.search) if threshold else None
         model = Path(cfg["model"])
         if model.stat().st_size > 512 * 1024**2:
             raise ValueError("Expected an exported RVC inference checkpoint under 512 MiB")
@@ -110,13 +110,9 @@ class Converter:
         self.history[:-self.chunk] = self.history[self.chunk:]
         self.history[-self.chunk:] = block
         gate_window = None
-        if self.gate and not warmup:
-            if self.hold is None:
-                closed = np.mean(block * block) < self.gate ** 2
-            else:
-                gate_window = self.hold.window(block)
-                closed = not np.any(gate_window)
-            if closed:
+        if self.gate is not None and not warmup:
+            gate_window = self.gate.window(block)
+            if not gate_window.any():
                 self.tail = None
                 return np.zeros_like(block)
         audio = np.convolve(self.history, self.down, mode="same")[::3]
