@@ -1,4 +1,4 @@
-// A test process loads this dylib before AudioCore. It simulates two devices
+// A test process loads this dylib before AudioCore. It simulates two microphones and a virtual output
 // and drives the registered callbacks without opening a microphone or speaker.
 #include <AudioToolbox/AudioToolbox.h>
 #include <CoreAudio/CoreAudio.h>
@@ -9,11 +9,12 @@
 #include <vector>
 
 namespace {
-constexpr AudioObjectID mic = 301, output = 302;
+constexpr AudioObjectID mic = 301, output = 302, secondMic = 303;
+AudioObjectID defaultMic = mic;
 UInt32 bufferSize = 512;
 bool micAvailable = true;
 OSStatus nextOpen = noErr;
-struct Unit { AURenderCallbackStruct capture{}, render{}; };
+struct Unit { AudioObjectID device{}; AURenderCallbackStruct capture{}, render{}; };
 struct Listener {
     AudioObjectID object;
     AudioObjectPropertyAddress address;
@@ -27,7 +28,11 @@ uint64_t fixtureTime = 0;
 
 OSStatus propertySize(AudioObjectID id, const AudioObjectPropertyAddress *address,
                       UInt32, const void *, UInt32 *bytes) {
-    if ((id == mic || id == output) && address->mSelector == kAudioDevicePropertyStreamConfiguration) {
+    if (id == kAudioObjectSystemObject && address->mSelector == kAudioHardwarePropertyDevices) {
+        *bytes = (micAvailable ? 3 : 2) * sizeof(AudioObjectID);
+        return noErr;
+    }
+    if ((id == mic || id == secondMic || id == output) && address->mSelector == kAudioDevicePropertyStreamConfiguration) {
         *bytes = sizeof(AudioBufferList);
         return noErr;
     }
@@ -35,19 +40,41 @@ OSStatus propertySize(AudioObjectID id, const AudioObjectPropertyAddress *addres
 }
 OSStatus propertyData(AudioObjectID id, const AudioObjectPropertyAddress *address,
                       UInt32, const void *, UInt32 *bytes, void *data) {
-    if ((id != mic && id != output) || (id == mic && !micAvailable)) return kAudioHardwareBadObjectError;
+    if (id == kAudioObjectSystemObject) {
+        if (address->mSelector == kAudioHardwarePropertyDefaultInputDevice) {
+            *static_cast<AudioObjectID *>(data) = defaultMic;
+            return noErr;
+        }
+        if (address->mSelector == kAudioHardwarePropertyDevices) {
+            const AudioObjectID ids[] = {output, secondMic, mic};
+            const UInt32 size = (micAvailable ? 3 : 2) * sizeof(AudioObjectID);
+            if (*bytes < size) return kAudioHardwareBadPropertySizeError;
+            std::memcpy(data, ids, size);
+            *bytes = size;
+            return noErr;
+        }
+    }
+    if ((id != mic && id != secondMic && id != output) || (id == mic && !micAvailable)) return kAudioHardwareBadObjectError;
     switch (address->mSelector) {
-        case kAudioDevicePropertyDeviceUID:
-            *static_cast<CFStringRef *>(data) = static_cast<CFStringRef>(CFRetain(id == mic ? CFSTR("fixture.mic") : CFSTR("fixture.output")));
+        case kAudioObjectPropertyName:
+        case kAudioDevicePropertyDeviceUID: {
+            CFStringRef uid = CFSTR("fixture.output");
+            if (id == mic) uid = CFSTR("fixture.mic");
+            if (id == secondMic) uid = CFSTR("fixture.secondMic");
+            *static_cast<CFStringRef *>(data) = static_cast<CFStringRef>(CFRetain(uid));
             break;
+        }
         case kAudioDevicePropertyNominalSampleRate: *static_cast<double *>(data) = 48000; break;
         case kAudioDevicePropertyBufferFrameSize: *static_cast<UInt32 *>(data) = bufferSize; break;
         case kAudioDevicePropertyDeviceIsAlive: *static_cast<UInt32 *>(data) = 1; break;
-        case kAudioDevicePropertyTransportType: *static_cast<UInt32 *>(data) = kAudioDeviceTransportTypeVirtual; break;
+        case kAudioDevicePropertyTransportType:
+            *static_cast<UInt32 *>(data) = id == output ? kAudioDeviceTransportTypeVirtual : kAudioDeviceTransportTypeUSB;
+            break;
         case kAudioDevicePropertyStreamConfiguration: {
             auto *list = static_cast<AudioBufferList *>(data);
             if (*bytes < sizeof(*list)) return kAudioHardwareBadPropertySizeError;
-            list->mNumberBuffers = 1;
+            const auto scope = id == output ? kAudioObjectPropertyScopeOutput : kAudioObjectPropertyScopeInput;
+            list->mNumberBuffers = address->mScope == scope ? 1 : 0;
             list->mBuffers[0] = {1, 0, nullptr};
             break;
         }
@@ -80,7 +107,9 @@ OSStatus dispose(AudioComponentInstance unit) {
 }
 OSStatus configure(AudioUnit unit, AudioUnitPropertyID key, AudioUnitScope, AudioUnitElement, const void *data, UInt32) {
     auto *u = reinterpret_cast<Unit *>(unit);
-    if (key == kAudioOutputUnitProperty_SetInputCallback) {
+    if (key == kAudioOutputUnitProperty_CurrentDevice) {
+        u->device = *static_cast<const AudioObjectID *>(data);
+    } else if (key == kAudioOutputUnitProperty_SetInputCallback) {
         u->capture = *static_cast<const AURenderCallbackStruct *>(data);
         source = u;
     } else if (key == kAudioUnitProperty_SetRenderCallback) {
@@ -90,10 +119,10 @@ OSStatus configure(AudioUnit unit, AudioUnitPropertyID key, AudioUnitScope, Audi
     return noErr;
 }
 OSStatus success(AudioUnit) { return noErr; }
-OSStatus inputAudio(AudioUnit, AudioUnitRenderActionFlags *, const AudioTimeStamp *, UInt32, UInt32 n, AudioBufferList *list) CA_REALTIME_API {
+OSStatus inputAudio(AudioUnit unit, AudioUnitRenderActionFlags *, const AudioTimeStamp *, UInt32, UInt32 n, AudioBufferList *list) CA_REALTIME_API {
     auto *dest = static_cast<float *>(list->mBuffers[0].mData);
     if (fixtureAudio) std::copy_n(fixtureAudio, n, dest);
-    else std::fill_n(dest, n, .5f);
+    else std::fill_n(dest, n, reinterpret_cast<Unit *>(unit)->device == secondMic ? .25f : .5f);
     return noErr;
 }
 }
@@ -103,6 +132,12 @@ extern "C" void mv_fixture_event(bool activeBufferChange) {
     if (activeBufferChange) bufferSize = 256;
     for (const auto &l : listeners)
         if (l.object == id && l.address.mSelector == key) l.fn(id, 1, &l.address, l.context);
+}
+extern "C" void mv_fixture_set_default_mic(AudioObjectID id) {
+    defaultMic = id;
+    for (const auto &l : listeners)
+        if (l.object == kAudioObjectSystemObject && l.address.mSelector == kAudioHardwarePropertyDefaultInputDevice)
+            l.fn(l.object, 1, &l.address, l.context);
 }
 extern "C" void mv_fixture_set_mic_available(bool available) {
     micAvailable = available;

@@ -29,7 +29,7 @@ For actual capture-to-receiver latency, a later loopback harness must observe Bl
 
 ## Recovery checks
 
-While running, unplug/reconnect the selected USB microphone, sleep/wake the Mac, and change a selected device's sample rate or buffer size. The app should stop the old route and reconnect the same saved UIDs. Input/output stalls are detected by the control timer. It must not select a different physical microphone automatically or grow its buffers indefinitely. Permission refusal must produce a useful error; it must not begin capture.
+While running, change the macOS default input with both microphones connected, then unplug the active microphone. In each case, confirm the picker and audio capture move to the new physical default and resume on the selected virtual output. With no microphone available, confirm capture resumes when a default microphone appears. Connecting an unrelated device should preserve a manual microphone choice and avoid interrupting audio. Also check sleep/wake, sample rate and buffer changes, input/output stalls, and microphone permission refusal.
 
 The engine is limited to 8–192 kHz, up to 64 physical input channels, and device buffers small enough for its fixed queue. It maps the selected input channel to the first one or two virtual output channels. These are explicit baseline limits.
 

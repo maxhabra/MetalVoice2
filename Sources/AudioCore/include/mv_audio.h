@@ -16,7 +16,7 @@ typedef struct {
 typedef struct {
     int running, latency_valid, device_changed;
     int32_t last_error;
-    uint64_t device_list_generation; // Changes to device inventory, including unrelated devices.
+    uint64_t device_list_generation; // Changes to the device inventory or default microphone.
     double input_rate, output_rate, queue_ms, target_queue_ms;
     double latency_ms, latency_p50_ms, latency_p95_ms, latency_max_ms;
     double drift_ppm, input_peak, output_peak;
@@ -52,6 +52,7 @@ enum { MVStartOK = 0, MVStartFailed = -1, MVStartDeviceNotReady = -2 };
 // Control-thread API. Enumeration and lifecycle functions are never callback-safe.
 int mv_devices(MVDevice *devices, int capacity);
 MVEngine *mv_create(void);
+uint64_t mv_device_list_generation(const MVEngine *engine);
 void mv_destroy(MVEngine *engine);
 int mv_start(MVEngine *engine, uint32_t input, uint32_t output, uint32_t channel,
              char *error, size_t error_capacity);

@@ -156,6 +156,9 @@ struct MVEngine {
     std::array<float, maxFrames> mono{};
     struct Listener { AudioObjectID object; AudioObjectPropertyAddress address; };
     std::vector<Listener> listeners;
+    static constexpr AudioObjectPropertySelector inventoryProperties[] = {
+        kAudioHardwarePropertyDevices, kAudioHardwarePropertyDefaultInputDevice
+    };
     std::atomic<bool> running{false}, changed{false}, muted{false}, latencyValid{false};
     std::atomic<int32_t> lastError{0};
     std::atomic<uint64_t> captured{0}, rendered{0}, underruns{0}, resyncs{0}, latencyCount{0};
@@ -284,7 +287,8 @@ struct MVEngine {
         auto &engine = *static_cast<MVEngine *>(context);
         if (object == kAudioObjectSystemObject) {
             for (UInt32 i = 0; i < count; ++i)
-                if (addresses[i].mSelector == kAudioHardwarePropertyDevices)
+                if (addresses[i].mSelector == kAudioHardwarePropertyDevices ||
+                    addresses[i].mSelector == kAudioHardwarePropertyDefaultInputDevice)
                     engine.deviceListGeneration.fetch_add(1, std::memory_order_relaxed);
         }
         engine.routeDirty.store(true, std::memory_order_release);
@@ -398,7 +402,20 @@ struct MVEngine {
         if (workerWake != MACH_PORT_NULL) { semaphore_destroy(mach_task_self(), workerWake); workerWake = MACH_PORT_NULL; }
         latencyValid.store(false);
     }
-    ~MVEngine() { stop(); }
+    // Keep watching during startup, sleep and retries, even with both audio units closed.
+    MVEngine() {
+        for (auto key : inventoryProperties) {
+            auto address = addr(key);
+            AudioObjectAddPropertyListener(kAudioObjectSystemObject, &address, deviceEvent, this);
+        }
+    }
+    ~MVEngine() {
+        for (auto key : inventoryProperties) {
+            auto address = addr(key);
+            AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, deviceEvent, this);
+        }
+        stop();
+    }
 };
 
 extern "C" int mv_devices(MVDevice *devices, int capacity) {
@@ -427,6 +444,9 @@ extern "C" int mv_devices(MVDevice *devices, int capacity) {
     return count;
 }
 extern "C" MVEngine *mv_create() { return new MVEngine(); }
+extern "C" uint64_t mv_device_list_generation(const MVEngine *e) {
+    return e->deviceListGeneration.load(std::memory_order_relaxed);
+}
 extern "C" void mv_destroy(MVEngine *e) { delete e; }
 extern "C" void mv_stop(MVEngine *e) { if (e) e->stop(); }
 extern "C" void mv_set_muted(MVEngine *e, int muted) { if (e) e->muted.store(muted != 0); }
@@ -586,7 +606,6 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
             if (mv_playback_start(e->playback.get(), e->workerWake, message, sizeof(message)) != 0)
                 throw std::runtime_error(message);
         }
-        e->listen(kAudioObjectSystemObject, kAudioHardwarePropertyDevices);
         check(AudioOutputUnitStart(e->input), "Start microphone");
         check(AudioOutputUnitStart(e->output), "Start virtual output");
         e->routeDirty = true; // Also check events between taking snapshots and installing listeners.
@@ -613,7 +632,7 @@ extern "C" void mv_stats(MVEngine *e, MVStats *s) {
     s->running = e->running; s->latency_valid = e->latencyValid;
     if (s->running && e->routeDirty.exchange(false, std::memory_order_acq_rel) && e->activeRouteChanged())
         e->changed = true;
-    s->device_list_generation = e->deviceListGeneration.load(std::memory_order_relaxed);
+    s->device_list_generation = mv_device_list_generation(e);
     s->device_changed = e->changed; s->last_error = e->lastError;
     s->input_rate = e->inRate; s->output_rate = e->outRate;
     s->input_buffer_frames = e->inBuffer; s->output_buffer_frames = e->outBuffer;

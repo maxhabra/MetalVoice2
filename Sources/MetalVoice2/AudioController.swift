@@ -60,23 +60,14 @@ func dpdfEngineLabel(_ stats: MVStats) -> String {
     return devices.isEmpty ? "Core ML · automatic" : "Core ML · \(devices.joined(separator: " + "))"
 }
 
-struct AudioDevice: Identifiable, Equatable {
-    let id: UInt32
-    let uid: String
-    let name: String
-    let inputs: Int
-    let outputs: Int
-    let sampleRate: Double
-    let bufferFrames: UInt32
-    let isVirtual: Bool
-    let isDefaultInput: Bool
-
-    static func list() -> [AudioDevice] {
+extension AudioDevice {
+    static func list() -> [AudioDevice]? {
         let count = mv_devices(nil, 0)
-        guard count > 0 else { return [] }
+        guard count >= 0 else { return nil }
+        if count == 0 { return [] }
         var devices = [MVDevice](repeating: MVDevice(), count: Int(count) + 16)
         let found = mv_devices(&devices, Int32(devices.count))
-        guard found > 0 else { return [] }
+        guard found >= 0 else { return nil }
         return devices.prefix(Int(found)).filter { $0.alive != 0 }.map {
             AudioDevice(id: $0.id, uid: nativeString($0.uid), name: nativeString($0.name),
                         inputs: Int($0.input_channels), outputs: Int($0.output_channels),
@@ -118,7 +109,7 @@ final class AudioController: ObservableObject {
     @Published private var recovery = DeviceRecovery()
     var wantedRunning: Bool { recovery.requested }
 
-    var inputs: [AudioDevice] { devices.filter { $0.inputs > 0 && !$0.isVirtual } }
+    var inputs: [AudioDevice] { devices.filter(\.isMicrophone) }
     var outputs: [AudioDevice] { devices.filter { $0.outputs > 0 && $0.isVirtual } }
     var selectedInput: AudioDevice? { inputs.first { $0.uid == inputUID } }
     var selectedOutput: AudioDevice? { outputs.first { $0.uid == outputUID } }
@@ -159,7 +150,8 @@ final class AudioController: ObservableObject {
     private var sleeping = false
     private var generation = 0
     private var pollPending = false
-    private var inventoryGeneration: UInt64 = 0
+    private var inventoryGeneration: UInt64?
+    private var previousDefaultUID = UserDefaults.standard.string(forKey: "lastDefaultInputUID")
     private var unchangedPolls = 0
     private var lastFrames: UInt64 = 0
     private var lastOutputFrames: UInt64 = 0
@@ -178,7 +170,6 @@ final class AudioController: ObservableObject {
         suppressionLevel = min(3, max(0, defaults.object(forKey: "suppressionLevel") as? Int ?? 1))
         enhancedSuppression = EnhancedSuppression(rawValue: defaults.string(forKey: "enhancedSuppression") ?? "off") ?? .off
         refreshDevices()
-        if let input = selectedInput { channel = max(0, min(channel, input.inputs - 1)) }
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.poll() }
         let center = NSWorkspace.shared.notificationCenter
         observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
@@ -205,10 +196,34 @@ final class AudioController: ObservableObject {
     func meterLevels() -> MVMeterLevels { mv_meter_levels(engine) }
 
     func refreshDevices() {
-        let available = AudioDevice.list()
+        // Read the generation first so a change during enumeration triggers another refresh.
+        let generation = mv_device_list_generation(engine)
+        guard let available = AudioDevice.list() else {
+            inventoryGeneration = nil
+            return
+        }
+        applyDevices(available, generation: generation)
+    }
+
+    private func applyDevices(_ available: [AudioDevice], generation: UInt64) {
+        let microphone = AudioDevice.microphone(in: available, selectedUID: inputUID, previousDefaultUID: previousDefaultUID)
+        let reportedDefault = available.first(where: \.isDefaultInput)
+        // HAL can announce a default before it publishes that microphone's channels.
+        let defaultPending = reportedDefault.map { !$0.isVirtual && !$0.isMicrophone } ?? false
+        inventoryGeneration = defaultPending ? nil : generation
+        let defaultUID = reportedDefault?.uid ?? ""
         if devices != available { devices = available }
-        if inputUID.isEmpty {
-            inputUID = inputs.first(where: \.isDefaultInput)?.uid ?? inputs.first?.uid ?? ""
+        if let microphone {
+            let nextChannel = microphone.uid == inputUID ? min(max(0, channel), microphone.inputs - 1) : 0
+            if microphone.uid != inputUID || nextChannel != channel {
+                inputUID = microphone.uid
+                channel = nextChannel
+                saveSelection()
+            }
+        }
+        if !defaultPending && previousDefaultUID != defaultUID {
+            previousDefaultUID = defaultUID
+            UserDefaults.standard.set(defaultUID, forKey: "lastDefaultInputUID")
         }
         if outputUID.isEmpty {
             outputUID = outputs.first(where: { $0.name.localizedCaseInsensitiveContains("BlackHole 2ch") })?.uid
@@ -336,13 +351,26 @@ final class AudioController: ObservableObject {
     private func startAuthorized() {
         guard !sleeping else { return }
         refreshDevices()
-        guard let input = selectedInput, let output = selectedOutput, (0..<input.inputs).contains(channel) else {
-            status = "Waiting for selected devices"
-            error = outputs.isEmpty ? "No virtual output found. Install or enable BlackHole, then Refresh devices."
-                : "Reconnect the selected devices, or choose another microphone and virtual output."
+        guard let input = selectedInput else {
+            status = "Waiting for a microphone"
+            error = nil
             recovery.waitForDevice()
             return
         }
+        guard let output = selectedOutput else {
+            status = "Waiting for virtual output"
+            error = outputs.isEmpty ? "Install or enable a virtual output such as BlackHole."
+                : "Reconnect the selected virtual output, or choose another one."
+            recovery.waitForDevice()
+            return
+        }
+        if (processingEnabled || hasVoice) && input.sampleRate != 48000 {
+            status = "Waiting for a 48 kHz microphone"
+            error = "Set \(input.name) to 48,000 Hz in Audio MIDI Setup, or choose another microphone."
+            recovery.waitForDevice()
+            return
+        }
+        error = nil
         saveSelection()
         var launch: VoiceLaunch?
         if hasVoice {
@@ -481,6 +509,13 @@ final class AudioController: ObservableObject {
     private func poll() {
         guard !busy, !sleeping, !pollPending else { return }
         if !running {
+            if mv_device_list_generation(engine) != inventoryGeneration {
+                let previousInput = selectedInput, previousOutput = selectedOutput
+                refreshDevices()
+                if wantedRunning && (previousInput != selectedInput || previousOutput != selectedOutput) {
+                    recovery.retryAt = .distantPast
+                }
+            }
             if recovery.shouldRetry() { start() }
             return
         }
@@ -494,9 +529,13 @@ final class AudioController: ObservableObject {
             DispatchQueue.main.async {
                 self.pollPending = false
                 guard token == self.generation else { return }
+                let inputUID = self.inputUID, channel = self.channel
                 if let inventory {
-                    self.devices = inventory
-                    self.inventoryGeneration = snapshot.device_list_generation
+                    self.applyDevices(inventory, generation: snapshot.device_list_generation)
+                }
+                if snapshot.device_changed != 0 || inputUID != self.inputUID || channel != self.channel {
+                    self.stop(preserveIntent: true, restartImmediately: true)
+                    return
                 }
                 if snapshot.input_frames == self.lastFrames || snapshot.output_frames == self.lastOutputFrames {
                     self.unchangedPolls += 1
@@ -508,15 +547,15 @@ final class AudioController: ObservableObject {
                     self.stop()
                     return
                 }
-                if snapshot.device_changed == 0 && (snapshot.last_error == MVErrorEchoReferenceUnavailable || snapshot.last_error == MVErrorEchoProcessing) {
+                if snapshot.last_error == MVErrorEchoReferenceUnavailable || snapshot.last_error == MVErrorEchoProcessing {
                     self.error = snapshot.last_error == MVErrorEchoReferenceUnavailable
                         ? "Echo lost its playback reference. Check System Audio Recording permission and the macOS sound output, then turn Enable off and on. Your calling app must play through that output."
                         : "Echo processing failed. Toggle Echo to retry or leave it off."
                     self.stop()
                     return
                 }
-                if snapshot.device_changed != 0 || snapshot.last_error != 0 || self.unchangedPolls >= 4 {
-                    self.error = snapshot.device_changed != 0 || snapshot.last_error == 0 ? "Audio route changed; reconnecting selected devices."
+                if snapshot.last_error != 0 || self.unchangedPolls >= 4 {
+                    self.error = snapshot.last_error == 0 ? "Audio stalled. Reconnecting…"
                         : "Core Audio error \(snapshot.last_error); reconnecting."
                     self.recovery.retryAt = Date().addingTimeInterval(1)
                     self.stop(preserveIntent: true)

@@ -29,7 +29,7 @@ swift build "${options[@]}" -c release --product transport-tests
 clang++ -std=c++20 -dynamiclib Tests/RouteFixture/HAL.cpp -framework AudioToolbox -framework CoreAudio \
     -framework CoreFoundation -o build/libRouteFixture.dylib
 DYLD_INSERT_LIBRARIES="$PWD/build/libRouteFixture.dylib" "$binary_dir/transport-tests" --route-fixture
-swiftc -module-cache-path build/module-cache -I Sources/AudioCore/include Sources/MetalVoice2/DeviceRecovery.swift \
+swiftc -module-cache-path build/module-cache -I Sources/AudioCore/include Sources/MetalVoice2/{AudioDevice,DeviceRecovery}.swift \
     Tests/DeviceRecovery/main.swift -o build/device-recovery-tests
 build/device-recovery-tests
 swift build "${options[@]}" -c release --product noise-tests

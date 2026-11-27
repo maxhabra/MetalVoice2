@@ -13,7 +13,7 @@ MetalVoice2 is a native Apple Silicon menu bar app for microphone cleanup and op
 
 ## Install and set up
 
-Download the [v2.0-beta Apple Silicon ZIP](https://github.com/maxhabra/MetalVoice2/releases/tag/v2.0-beta), unzip it and move **MetalVoice2.app** to Applications. The ZIP includes the optional `setup_voice_runtime.sh` for voice conversion.
+Download the [v2.0-beta.2 Apple Silicon ZIP](https://github.com/maxhabra/MetalVoice2/releases/tag/v2.0-beta.2), unzip it and move **MetalVoice2.app** to Applications. The ZIP includes the optional `setup_voice_runtime.sh` for voice conversion.
 
 You need macOS 15 or later and a **virtual audio driver**, such as [BlackHole 2ch](https://github.com/ExistentialAudio/BlackHole) or [VB-CABLE](https://vb-audio.com/Cable/). Building from source requires Command Line Tools with Swift 6, Rust/Cargo and Python 3. The first build downloads dependencies.
 
@@ -22,7 +22,7 @@ You need macOS 15 or later and a **virtual audio driver**, such as [BlackHole 2c
 open build/MetalVoice2.app --args --show
 ```
 
-1. In **Microphone**, turn on **Enable** and grant microphone access. Choose your physical input, channel and virtual output. Set the input to **48,000 Hz** in Audio MIDI Setup for cleanup or voice conversion.
+1. In **Microphone**, turn on **Enable** and grant microphone access. Choose your physical input, channel and virtual output. If the microphone disconnects or macOS selects a new default microphone, MetalVoice2 switches to the physical default and resumes on the same virtual output. Set the input to **48,000 Hz** in Audio MIDI Setup for cleanup or voice conversion.
 2. In your calling or recording app, select that same virtual device as its microphone. With BlackHole, choose **BlackHole 2ch** in both apps.
 3. Each tab has its own **Enable** and **Enable at launch**. Turn both tabs off to stop streaming. To open MetalVoice2 at login, add it under **System Settings → General → Login Items & Extensions**.
 

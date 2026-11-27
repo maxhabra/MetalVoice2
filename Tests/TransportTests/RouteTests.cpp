@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdio>
 #include <chrono>
+#include <cmath>
 #include <thread>
 #include <mach/mach_time.h>
 #include <dlfcn.h>
@@ -14,9 +15,10 @@ void routeTests() {
     auto event = reinterpret_cast<void (*)(bool)>(dlsym(RTLD_DEFAULT, "mv_fixture_event"));
     auto tick = reinterpret_cast<UInt32 (*)(float *)>(dlsym(RTLD_DEFAULT, "mv_fixture_tick"));
     auto setMicAvailable = reinterpret_cast<void (*)(bool)>(dlsym(RTLD_DEFAULT, "mv_fixture_set_mic_available"));
+    auto setDefaultMic = reinterpret_cast<void (*)(AudioObjectID)>(dlsym(RTLD_DEFAULT, "mv_fixture_set_default_mic"));
     auto failOpen = reinterpret_cast<void (*)(OSStatus)>(dlsym(RTLD_DEFAULT, "mv_fixture_fail_open"));
     auto require = [](bool ok, const char *why) { if (!ok) throw std::runtime_error(why); };
-    require(event && tick && setMicAvailable && failOpen, "Synthetic HAL is required");
+    require(event && tick && setMicAvailable && setDefaultMic && failOpen, "Synthetic HAL is required");
     std::unique_ptr<MVEngine, decltype(&mv_destroy)> engine(mv_create(), mv_destroy);
     char error[256]{};
     auto start = [&] { return mv_start(engine.get(), 301, 302, 0, error, sizeof(error)); };
@@ -34,6 +36,24 @@ void routeTests() {
     mv_stats(engine.get(), &after);
     require(!after.device_changed && after.device_list_generation > before.device_list_generation &&
             after.output_frames == before.output_frames + 512, "Unrelated device interrupted the active route");
+    setDefaultMic(303);
+    mv_stats(engine.get(), &before);
+    require(before.device_list_generation > after.device_list_generation, "Default-only change must refresh the microphone list");
+    MVDevice devices[3]{};
+    require(mv_devices(devices, 3) == 3, "Expected both microphones and virtual output");
+    auto defaultMic = std::find_if(devices, devices + 3, [](const auto &d) { return d.is_default_input; });
+    require(defaultMic != devices + 3 && defaultMic->id == 303 && !defaultMic->is_virtual, "Expected new physical default");
+    setMicAvailable(false);
+    require(mv_start(engine.get(), defaultMic->id, 302, 0, error, sizeof(error)) == MVStartOK, "Replacement mic failed to open");
+    for (int i = 0; i < 8; ++i) tick(output.data());
+    require(std::abs(output[256] - .25f) < .001f, "New microphone audio must reach the same virtual output");
+    mv_stop(engine.get());
+    const auto stoppedGeneration = mv_device_list_generation(engine.get());
+    setMicAvailable(true);
+    setDefaultMic(301);
+    require(mv_device_list_generation(engine.get()) >= stoppedGeneration + 2, "Detect reconnect and new default while stopped");
+    require(start() == MVStartOK, "Original mic failed to reopen");
+    for (int i = 0; i < 8; ++i) tick(output.data());
     mv_set_muted(engine.get(), 1);
     const auto flags = tick(output.data());
     require(!(flags & kAudioUnitRenderAction_OutputIsSilence) && output[0] > .49f &&
@@ -97,5 +117,5 @@ void routeTests() {
     require(after.voice_input_rms == 0, "Bypass must clear the gate meter");
     require(output[256] > .45f, "Bypass did not restore input");
     std::puts("PASS post-cleanup voice routing and bypass");
-    std::puts("PASS simulated HAL reopen, unrelated hot-plug, selected buffer change and mute flags");
+    std::puts("PASS simulated default microphone handoff, HAL reopen, unrelated hot-plug, buffer change and mute flags");
 }

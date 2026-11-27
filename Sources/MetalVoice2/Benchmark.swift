@@ -25,7 +25,7 @@ func runBenchmark(arguments: [String]) -> Int32 {
         guard let i = arguments.firstIndex(of: name), i + 1 < arguments.count else { return nil }
         return arguments[i + 1]
     }
-    let devices = AudioDevice.list()
+    let devices = AudioDevice.list() ?? []
     let inputUID = option("--input-uid"), outputUID = option("--output-uid")
     guard let input = devices.first(where: { $0.inputs > 0 && !$0.isVirtual && (inputUID != nil ? $0.uid == inputUID : $0.isDefaultInput) }),
           let output = devices.first(where: { $0.outputs > 0 && $0.isVirtual && (outputUID != nil ? $0.uid == outputUID : $0.name.localizedCaseInsensitiveContains("BlackHole 2ch")) }) else {

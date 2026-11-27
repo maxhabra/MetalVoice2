@@ -227,7 +227,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 }
 
 if CommandLine.arguments.contains("--list-devices") {
-    let devices = AudioDevice.list().map { device -> [String: Any] in
+    let devices = (AudioDevice.list() ?? []).map { device -> [String: Any] in
         ["id": device.id, "uid": device.uid, "name": device.name,
          "inputs": device.inputs, "outputs": device.outputs,
          "sampleRate": device.sampleRate, "bufferFrames": device.bufferFrames,
