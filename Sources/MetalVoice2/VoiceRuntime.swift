@@ -19,7 +19,7 @@ enum VoiceRuntime {
 
     private static func failure(_ reason: String) -> NSError {
         NSError(domain: "MetalVoice2.VoiceRuntime", code: 1, userInfo: [NSLocalizedDescriptionKey:
-            "\(reason) Rebuild and install the voice runtime with setup_voice_runtime.sh."])
+            "\(reason) Install the matching voice-runtime .pkg for this build, then enable Voice Changer again."])
     }
 
     private static func checkPermissions(_ url: URL) throws {

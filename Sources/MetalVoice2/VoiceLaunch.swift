@@ -25,7 +25,7 @@ struct VoiceLaunch {
         python = root.appendingPathComponent("python/bin/python3.11").path
         worker = root.appendingPathComponent("Contents/Resources/RVC/worker.py").path
         guard FileManager.default.isExecutableFile(atPath: python) else {
-            throw failure("Install the protected voice runtime using setup_voice_runtime.sh.")
+            throw failure("Open the voice-runtime .pkg from this MetalVoice2 release, finish installation, then enable Voice Changer again.")
         }
         var folder = voice.model.deletingLastPathComponent()
         var candidates: [URL] = []
