@@ -383,6 +383,7 @@ final class AudioController: ObservableObject {
                 return
             }
         }
+        let model = voices.selected?.model
         let voice = launch, preset = hasVoice ? voices.selected?.preset : nil
         busy = true; status = hasVoice ? "Loading voice…" : "Starting…"; generation += 1
         let token = generation, selectedChannel = UInt32(channel), muted = self.muted
@@ -399,10 +400,12 @@ final class AudioController: ObservableObject {
             var message = [CChar](repeating: 0, count: 1024)
             mv_set_voice(self.engine, voice?.python, voice?.worker, voice?.config, UInt32(preset?.chunk ?? 0))
             let result = mv_start(self.engine, input.id, output.id, selectedChannel, &message, message.count)
+            let speakerCount = Int(mv_voice_speaker_count(self.engine))
             let failure = String(cString: message)
             DispatchQueue.main.async {
                 guard token == self.generation else { return }
                 self.busy = false
+                if let model { self.voices.setSpeakerCount(speakerCount, for: model) }
                 self.activeVoicePreset = result == 0 ? preset : nil
                 self.running = result == 0
                 self.status = result == 0 ? self.activeStatus : "Could not start"

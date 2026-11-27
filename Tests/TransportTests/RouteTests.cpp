@@ -80,6 +80,7 @@ void routeTests() {
     mv_set_muted(engine.get(), 0);
     mv_set_voice(engine.get(), "/usr/bin/python3", "Tests/RouteFixture/voice_worker.py", "{}", 100);
     require(start() == MVStartOK, "Voice worker failed to start");
+    require(mv_voice_speaker_count(engine.get()) == 3, "Expected speaker count from the worker");
     auto audio = reinterpret_cast<void (*)(const float *, uint64_t, float *)>(dlsym(RTLD_DEFAULT, "mv_fixture_audio"));
     require(audio, "Audio injection fixture missing");
     mach_timebase_info_data_t timebase{};

@@ -80,6 +80,16 @@ struct VoiceChangerView: View {
             .panelHelp("Remove the selected voice from the library. Its files stay on disk.")
             .disabled(library.selected == nil)
         }
+        if let count = library.selected?.speakerCount, count > 1 || preset.speaker != 0 {
+            Picker("Speaker ID", selection: value(\.speaker)) {
+                if !(0..<count).contains(preset.speaker) {
+                    Text("\(preset.speaker) (unavailable)").tag(preset.speaker)
+                }
+                ForEach(0..<count, id: \.self) { Text(String($0)).tag($0) }
+            }
+            .modifier(PendingValue(changed: changed(\.speaker)))
+            .panelHelp("Select a speaker from this voice model, then apply settings.")
+        }
         HStack {
             Text("Index").panelHelp("Optional file of voice features matched to this model.")
             Text(library.selected?.index?.lastPathComponent ?? "None")

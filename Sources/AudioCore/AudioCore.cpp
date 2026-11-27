@@ -476,6 +476,10 @@ extern "C" int mv_set_deepfilter_acceleration(MVEngine *e, int enabled) {
     return 0;
 }
 
+extern "C" uint32_t mv_voice_speaker_count(const MVEngine *e) {
+    return e ? e->voice.speakerCount : 0;
+}
+
 extern "C" void mv_set_voice(MVEngine *e, const char *python, const char *script, const char *config, uint32_t chunk_ms) {
     if (!e || e->input || e->output) return;
     e->voice.python = python ? python : "";
@@ -488,6 +492,7 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
                           char *error, size_t errorCapacity) {
     if (!e) return MVStartFailed;
     e->stop();
+    e->voice.speakerCount = 0;
     int failureCode = MVStartFailed;
     try {
         if (inputID == outputID) throw std::runtime_error("Input and output must be different devices to avoid a feedback loop.");

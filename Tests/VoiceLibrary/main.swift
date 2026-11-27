@@ -23,6 +23,10 @@ precondition(library.selected?.index == nil)
 library.select(a)
 precondition(library.selected?.index == index)
 var tuned = library.selected!.preset
+library.setSpeakerCount(3, for: a)
+tuned.speaker = 2
+let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(tuned)) as! [String: Any]
+precondition(encoded["speakerID"] as? Int == 2)
 tuned.pitch = -3
 tuned.highPass = 120
 tuned.gateHold = 230
@@ -45,7 +49,7 @@ library.setDraft(unsaved)
 try library.add([a])
 precondition(library.catalog.voices.count == 2 && library.selected?.preset == tuned)
 let restored = VoiceLibrary(defaults: defaults)
-precondition(restored.selected?.model == a && restored.selected?.preset == tuned)
+precondition(restored.selected?.model == a && restored.selected?.preset == tuned && restored.selected?.speakerCount == 3)
 restored.select(b)
 precondition(restored.selected?.preset == VoicePreset())
 try restored.attach(index)
@@ -61,6 +65,6 @@ restored.removeSelected()
 precondition(restored.selected == nil && restored.catalog.voices.count == 1 && FileManager.default.fileExists(atPath: b.path))
 let historical = Data(#"{"pitch":1,"chunk":250,"extra":80,"indexStrength":50,"highPass":100,"lowPass":10000,"gate":-70,"f0":"rmvpe_onnx"}"#.utf8)
 let migrated = try JSONDecoder().decode(VoicePreset.self, from: historical)
-precondition(migrated.gateHold == 0 && migrated.pitch == 1 && migrated.f0 == .rmvpe)
+precondition(migrated.speaker == 0 && migrated.gateHold == 0 && migrated.pitch == 1 && migrated.f0 == .rmvpe)
 print("PASS draft cancellation, applied-only persistence and legacy preset migration")
 print("PASS voice import, auto/manual index pairing, per-model settings, persistence and removal")

@@ -57,6 +57,7 @@ void mv_destroy(MVEngine *engine);
 int mv_start(MVEngine *engine, uint32_t input, uint32_t output, uint32_t channel,
              char *error, size_t error_capacity);
 void mv_stop(MVEngine *engine);
+uint32_t mv_voice_speaker_count(const MVEngine *engine);
 void mv_set_voice(MVEngine *engine, const char *python, const char *script, const char *config, uint32_t chunk_ms);
 void mv_set_muted(MVEngine *engine, int muted);
 // Configure only while stopped. Returns -1 if running or level is outside -1..3.

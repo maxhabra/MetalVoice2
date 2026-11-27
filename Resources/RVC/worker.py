@@ -34,7 +34,9 @@ class Converter:
         self.energy_window = np.ones(self.overlap, np.float32)
         self.f0_threshold = np.array([0.3], np.float32)
         self.tail = None
-        self.history = np.zeros(extra + self.chunk + self.overlap + self.search, np.float32)
+        # Keep the newest sample aligned while giving the decoder complete 10 ms hops.
+        window = extra + self.chunk + self.overlap + self.search
+        self.history = np.zeros(math.ceil(window / 480) * 480, np.float32)
         self.pitch_scale = 2 ** (float(spec["pitch"]) / 12)
         self.gate = 0 if spec["gate"] <= -120 else 10 ** (spec["gate"] / 20)
         self.down = lowpass(7600, 48000, 95)
@@ -57,7 +59,16 @@ class Converter:
         self.rate = int(architecture[-1])
         if self.rate not in (32000, 40000, 48000) or math.prod(architecture[12]) != self.rate // 100:
             raise ValueError("Unsupported RVC decoder sample rate")
-        architecture[-3] = weights["weight"]["emb_g.weight"].shape[0]
+        speaker_count = weights["weight"]["emb_g.weight"].shape[0]
+        if speaker_count < 1:
+            raise ValueError("The checkpoint has no speaker embeddings")
+        if cfg.get("reportSpeakerCount"):
+            pcm.write(f"SPEAKERS {speaker_count}\n".encode("ascii"))
+            pcm.flush()
+        speaker_id = spec.get("speakerID", 0)
+        if type(speaker_id) is not int or not 0 <= speaker_id < speaker_count:
+            raise ValueError(f"Choose a speaker ID from 0 to {speaker_count - 1} for this model.")
+        architecture[-3] = speaker_count
         decoder = SynthesizerTrnMs256NSFsid if version == "v1" else SynthesizerTrnMs768NSFsid
         self.net = decoder(*architecture, is_half=False)
         del self.net.enc_q
@@ -68,7 +79,7 @@ class Converter:
         for layer in self.net.modules():
             if hasattr(layer, "weight_g"):
                 torch.nn.utils.remove_weight_norm(layer)
-        self.speaker = self.net.emb_g(torch.LongTensor([0])).unsqueeze(-1)
+        self.speaker = self.net.emb_g(torch.LongTensor([speaker_id])).unsqueeze(-1)
         options = ort.SessionOptions()
         options.intra_op_num_threads = 3
         options.inter_op_num_threads = 1

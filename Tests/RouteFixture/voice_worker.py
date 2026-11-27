@@ -2,7 +2,7 @@
 from array import array
 import sys
 
-sys.stdout.buffer.write(b"OK\n")
+sys.stdout.buffer.write(b"SPEAKERS 3\nOK\n")
 sys.stdout.buffer.flush()
 while True:
     block = sys.stdin.buffer.read(1920)

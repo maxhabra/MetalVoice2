@@ -5,6 +5,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <charconv>
 #include <cerrno>
 #include <fcntl.h>
 #include <poll.h>
@@ -12,6 +13,7 @@
 #include <spawn.h>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -31,6 +33,7 @@ class RVCStream {
     uint64_t silenceThrough = 0;
     std::array<double, 400> origins{};
 public:
+    unsigned speakerCount = 0;
     unsigned blocksPerChunk = 0;
     std::atomic<double> inputRMS{0}, displayRMS{0};
     std::string python, script, config;
@@ -83,8 +86,21 @@ public:
             if (ready < 0 && errno != EINTR) break;
             if (ready <= 0) continue;
             char c;
-            if (recv(fd, &c, 1, 0) != 1 || c == '\n') break;
-            line.push_back(c);
+            if (recv(fd, &c, 1, 0) != 1) break;
+            if (c != '\n') {
+                line.push_back(c);
+                continue;
+            }
+            // An optional metadata line precedes the worker's OK or ERROR response.
+            constexpr std::string_view prefix = "SPEAKERS ";
+            if (speakerCount || !line.starts_with(prefix)) break;
+            unsigned count = 0;
+            auto end = line.data() + line.size();
+            auto parsed = std::from_chars(line.data() + prefix.size(), end, count);
+            if (parsed.ec != std::errc{} || parsed.ptr != end || !count)
+                throw std::runtime_error("Invalid speaker count from the voice worker.");
+            speakerCount = count;
+            line.clear();
         }
         if (line != "OK") throw std::runtime_error(line.empty() ? "Voice runtime failed to load the selected model." : line);
         sent = received = 0;

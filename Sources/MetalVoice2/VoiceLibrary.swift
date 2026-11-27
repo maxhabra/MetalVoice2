@@ -20,6 +20,11 @@ struct VoicePreset: Codable, Equatable {
         get { gateHoldMS ?? 0 }
         set { gateHoldMS = newValue == 0 ? nil : newValue }
     }
+    private var speakerID: Int?
+    var speaker: Int {
+        get { speakerID ?? 0 }
+        set { speakerID = newValue == 0 ? nil : newValue }
+    }
     var f0: F0Estimator = .rmvpe
 }
 
@@ -27,6 +32,7 @@ struct VoiceEntry: Identifiable, Codable {
     let model: URL
     var index: URL?
     var preset = VoicePreset()
+    var speakerCount: Int?
     var id: URL { model }
     var name: String { model.deletingPathExtension().lastPathComponent }
 }
@@ -89,6 +95,11 @@ final class VoiceLibrary: ObservableObject {
     func attach(_ file: URL?) throws {
         let index = try file.map { try checked($0, extension: "index") }
         updateSelected { $0.index = index }
+    }
+
+    func setSpeakerCount(_ count: Int, for model: URL) {
+        guard count > 0, selected?.model == model, selected?.speakerCount != count else { return }
+        updateSelected { $0.speakerCount = count }
     }
 
     var editedPreset: VoicePreset? {

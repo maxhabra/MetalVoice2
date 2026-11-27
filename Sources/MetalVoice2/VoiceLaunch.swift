@@ -10,6 +10,7 @@ struct VoiceLaunch {
         var index: String?
         var assets: String
         var preset: VoicePreset
+        let reportSpeakerCount = true
     }
 
     init(voice: VoiceEntry?) throws {

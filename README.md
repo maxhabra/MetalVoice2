@@ -38,6 +38,7 @@ Conversion runs **after microphone cleanup** in a local CPU worker using Content
 
 | Voice setting | What to adjust |
 |---|---|
+| Speaker ID | For a multi-speaker model, select a numbered speaker and click **Apply settings**. MetalVoice2 remembers the selection for that model. |
 | F0 estimator | **RMVPE (ONNX)** tracks input pitch with a neural model. **Harvest** tracks it from speech harmonics using the bundled WORLD algorithm. Select one and click **Apply settings** to save it for that voice. |
 | Chunk | Fresh audio collected per conversion. Lower values reduce waiting time but give the worker less time to finish. |
 | Extra history | Past audio used as context. Increasing it adds inference work without waiting for that much new audio. |
