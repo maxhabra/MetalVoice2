@@ -13,7 +13,7 @@ MetalVoice2 is a native Apple Silicon menu bar app for microphone cleanup and op
 
 ## Install and set up
 
-Download the [v2.0 Apple Silicon app ZIP](https://github.com/maxhabra/MetalVoice2/releases/download/v2.0/MetalVoice2-v2.0-macOS-arm64.zip), unzip it and move **MetalVoice2.app** to Applications. To use the voice changer, also download and open the [matching voice-runtime installer](https://github.com/maxhabra/MetalVoice2/releases/download/v2.0/MetalVoice2-VoiceRuntime-v2.0-macOS-arm64.pkg). Microphone cleanup works with the app alone.
+Download the [v2.0 Apple Silicon app ZIP](https://github.com/maxhabra/MetalVoice2/releases/download/v2.0/MetalVoice2-v2.0-macOS-arm64.zip), unzip it and move **MetalVoice2.app** to Applications. The app prepares voice conversion automatically the first time you enable it with a voice selected.
 
 You need macOS 15 or later and a **virtual audio driver**, such as [BlackHole 2ch](https://github.com/ExistentialAudio/BlackHole) or [VB-CABLE](https://vb-audio.com/Cable/). Building from source requires Command Line Tools with Swift 6, Rust/Cargo and Python 3. The first build downloads dependencies.
 
@@ -30,7 +30,7 @@ The menu bar **M lights blue** for the microphone stage and **V lights violet** 
 
 ## Voice Changer · v2.0
 
-Conversion runs **after microphone cleanup** in a local CPU worker using ContentVec, a selectable pitch estimator and an RVC decoder. For a source build, run `./scripts/build.sh`, then `./scripts/setup_voice_runtime.sh` as your normal user. Open the generated **MetalVoice2-VoiceRuntime.pkg** and authorize macOS Installer. The package installs a private Python distribution, locked dependencies and matching worker under `/Library/MetalVoice2/RVC-1`. Rebuild the package when updating the app’s worker.
+Conversion runs **after microphone cleanup** in a local CPU worker using ContentVec, a selectable pitch estimator and an RVC decoder. Voice Changer reuses compatible per-user libraries or downloads them once into `~/Library/Application Support/MetalVoice2/RVC`. A fresh setup needs internet access and about 800 MB of disk space. Subsequent use works offline. Microphone cleanup runs independently.
 
 1. Under **Voice Changer**, turn on **Enable** and import a pitch-guided RVC v1 or v2 inference `.pth`. The app remembers its location. Keep the file in place. To use an optional retrieval index, choose **Attach .index…** and enter the SHA-256 supplied by its trusted publisher through an independent channel. Previously saved indexes need verification before use.
 2. For shared models, the app checks nearby VCClient folders. If prompted, use **Model assets…** to select the `modules` folder containing `contentvec/contentvec-f.onnx`. The default RMVPE estimator also uses `rmvpe/rmvpe_20231006.onnx`.

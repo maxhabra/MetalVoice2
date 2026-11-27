@@ -1,7 +1,6 @@
 import Foundation
 
 struct VoiceLaunch {
-    let python: String
     let worker: String
     let config: String
 
@@ -21,12 +20,10 @@ struct VoiceLaunch {
         guard let voice, FileManager.default.isReadableFile(atPath: voice.model.path) else {
             throw failure("Select a readable .pth voice or turn Voice changer off.")
         }
-        let root = VoiceRuntime.root
-        python = root.appendingPathComponent("python/bin/python3.11").path
-        worker = root.appendingPathComponent("Contents/Resources/RVC/worker.py").path
-        guard FileManager.default.isExecutableFile(atPath: python) else {
-            throw failure("Open the voice-runtime .pkg from this MetalVoice2 release, finish installation, then enable Voice Changer again.")
+        guard let helper = Bundle.main.url(forResource: "worker", withExtension: "py", subdirectory: "RVC") else {
+            throw failure("This app is missing its voice worker.")
         }
+        worker = helper.path
         var folder = voice.model.deletingLastPathComponent()
         var candidates: [URL] = []
         if let chosen = UserDefaults.standard.string(forKey: "rvcAssetsFolder"), !chosen.isEmpty {

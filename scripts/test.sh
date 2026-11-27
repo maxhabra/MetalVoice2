@@ -5,13 +5,7 @@ mkdir -p build/module-cache
 export CLANG_MODULE_CACHE_PATH="$PWD/build/module-cache"
 swiftc -module-cache-path build/module-cache Sources/MetalVoice2/VoiceLibrary.swift Tests/VoiceLibrary/main.swift -o build/voice-library-tests
 build/voice-library-tests
-swiftc -module-cache-path build/module-cache Sources/MetalVoice2/VoiceRuntime.swift Tests/VoiceSecurity/RuntimeDigest/main.swift -o build/voice-digest-tests
-digest_fixture="$(mktemp -d)"
-trap 'rm -rf "$digest_fixture"' EXIT
-printf 'fixture' > "$digest_fixture/worker.py"
-ln -s worker.py "$digest_fixture/worker-link"
-build/voice-digest-tests "$(python3 scripts/voice_runtime_digest.py "$digest_fixture")"
-voice_python="${METALVOICE_TEST_PYTHON:-/Library/MetalVoice2/RVC-1/python/bin/python3.11}"
+voice_python="${METALVOICE_TEST_PYTHON:-$HOME/Library/Application Support/MetalVoice2/RVC/engine-1/bin/python3.11}"
 if [[ -x "$voice_python" ]]; then
     "$voice_python" -IB Tests/VoiceGate/test_gate.py
     "$voice_python" -IB Tests/VoiceSecurity/test_index.py

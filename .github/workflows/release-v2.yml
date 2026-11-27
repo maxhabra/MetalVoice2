@@ -29,7 +29,6 @@ jobs:
           name: MetalVoice2-v2.0-macOS-arm64
           path: |
             build/release/MetalVoice2-v2.0-macOS-arm64.zip
-            build/release/MetalVoice2-VoiceRuntime-v2.0-macOS-arm64.pkg
             build/release/SHA256SUMS
           if-no-files-found: error
           compression-level: 0
@@ -66,7 +65,7 @@ jobs:
             test "$(jq -r .targetCommitish <<< "$release")" = "$MERGE_COMMIT"
           else
             gh release create "$tag" --draft --target "$MERGE_COMMIT" --title "MetalVoice2 v2.0" \
-              --notes "MetalVoice2 now follows macOS microphone changes and includes the Voice Changer panel. Download the Apple Silicon app ZIP for macOS 15 or later. For voice conversion, also install the matching voice-runtime package."
+              --notes "MetalVoice2 now follows macOS microphone changes and includes the Voice Changer panel. Download the Apple Silicon app ZIP for macOS 15 or later. Voice Changer prepares its dependencies automatically on first use."
           fi
-          gh release upload "$tag" MetalVoice2-v2.0-macOS-arm64.zip MetalVoice2-VoiceRuntime-v2.0-macOS-arm64.pkg SHA256SUMS --clobber
+          gh release upload "$tag" MetalVoice2-v2.0-macOS-arm64.zip SHA256SUMS --clobber
           gh release edit "$tag" --draft=false --latest

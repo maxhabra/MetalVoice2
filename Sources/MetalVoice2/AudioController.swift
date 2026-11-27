@@ -150,6 +150,8 @@ final class AudioController: ObservableObject {
     private var timer: Timer?
     private var sleeping = false
     private var generation = 0
+    private var voicePython: String?
+    private var preparingVoice = false
     private var pollPending = false
     private var inventoryGeneration: UInt64?
     private var previousDefaultUID = UserDefaults.standard.string(forKey: "lastDefaultInputUID")
@@ -306,6 +308,37 @@ final class AudioController: ObservableObject {
         if voiceEnabled { updateStream() }
     }
 
+    // Leave an active microphone route running while first-use voice dependencies download.
+    private func waitingForVoice(_ launch: VoiceLaunch) -> Bool {
+        if let voicePython, FileManager.default.isExecutableFile(atPath: voicePython) { return false }
+        guard !preparingVoice else { return true }
+        preparingVoice = true
+        status = "Preparing voice components…"
+        let script = URL(fileURLWithPath: launch.worker).deletingLastPathComponent().appendingPathComponent("prepare_voice.sh")
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("MetalVoice2/RVC")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = Result { try VoiceRuntime.prepare(in: support, using: script) }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.preparingVoice = false
+                switch result {
+                case .success(let python):
+                    self.voicePython = python
+                    if self.hasVoice && !self.sleeping { self.updateStream() }
+                case .failure(let error):
+                    guard self.hasVoice else { return }
+                    self.voiceEnabled = false
+                    if !self.cleanupEnabled { self.recovery.cancel() }
+                    else if !self.running && !self.sleeping { self.updateStream() }
+                    self.error = error.localizedDescription
+                    if !self.running && !self.busy { self.status = "Voice unavailable" }
+                }
+            }
+        }
+        return true
+    }
+
     private func updateStream(reconfigure: Bool = true) {
         guard !busy else { return }
         error = nil
@@ -319,6 +352,7 @@ final class AudioController: ObservableObject {
             return
         }
         guard reconfigure else { return }
+        if hasVoice, let launch = try? VoiceLaunch(voice: voices.selected), waitingForVoice(launch) { return }
         // Reconfigure off the callbacks. Brief silence avoids mixing raw and
         // filtered audio with different algorithmic delay during a switch.
         stop(preserveIntent: true, restartImmediately: true)
@@ -375,7 +409,11 @@ final class AudioController: ObservableObject {
         saveSelection()
         var launch: VoiceLaunch?
         if hasVoice {
-            do { launch = try VoiceLaunch(voice: voices.selected) }
+            do {
+                let selected = try VoiceLaunch(voice: voices.selected)
+                if waitingForVoice(selected) { return }
+                launch = selected
+            }
             catch {
                 recovery.cancel()
                 status = "Voice unavailable"
@@ -384,7 +422,7 @@ final class AudioController: ObservableObject {
             }
         }
         let model = voices.selected?.model
-        let voice = launch, preset = hasVoice ? voices.selected?.preset : nil
+        let voice = launch, python = launch == nil ? nil : voicePython, preset = hasVoice ? voices.selected?.preset : nil
         busy = true; status = hasVoice ? "Loading voice…" : "Starting…"; generation += 1
         let token = generation, selectedChannel = UInt32(channel), muted = self.muted
         let nsLevel = Int32(activeWebRTCLevel)
@@ -398,18 +436,10 @@ final class AudioController: ObservableObject {
             mv_set_room_dereverb(self.engine, dereverb ? 1 : 0)
             mv_set_enhanced_suppression(self.engine, enhancedMode)
             var message = [CChar](repeating: 0, count: 1024)
-            mv_set_voice(self.engine, voice?.python, voice?.worker, voice?.config, UInt32(preset?.chunk ?? 0))
-            let result: Int32
-            var verificationError: String?
-            do {
-                if voice != nil { try VoiceRuntime.verify() }
-                result = mv_start(self.engine, input.id, output.id, selectedChannel, &message, message.count)
-            } catch {
-                verificationError = error.localizedDescription
-                result = Int32(MVStartFailed)
-            }
-            let speakerCount = verificationError == nil ? Int(mv_voice_speaker_count(self.engine)) : 0
-            let failure = verificationError ?? String(cString: message)
+            mv_set_voice(self.engine, python, voice?.worker, voice?.config, UInt32(preset?.chunk ?? 0))
+            let result = mv_start(self.engine, input.id, output.id, selectedChannel, &message, message.count)
+            let speakerCount = Int(mv_voice_speaker_count(self.engine))
+            let failure = String(cString: message)
             DispatchQueue.main.async {
                 guard token == self.generation else { return }
                 self.busy = false

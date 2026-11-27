@@ -29,19 +29,15 @@ destination="${METALVOICE_BUILD_DIR:-$PWD/build}/MetalVoice2.app"
 staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/metalvoice2-build.XXXXXX")"
 trap 'rm -rf "$staging_dir"' EXIT
 bundle="$staging_dir/MetalVoice2.app"
-# Bind the optional worker and native Harvest library to the running executable.
+# Bundle the voice worker and its first-use setup alongside the native Harvest library.
 mkdir -p "$bundle/Contents/Resources/RVC/infer_pack" "$bundle/Contents/Frameworks"
-cp -X Resources/RVC/{worker.py,gate.py,harvest.py,isolation.py,runtime-requirements.txt} "$bundle/Contents/Resources/RVC/"
+cp -X Resources/RVC/{worker.py,gate.py,harvest.py,isolation.py,prepare_voice.sh,runtime-requirements.txt} "$bundle/Contents/Resources/RVC/"
 cp -X ThirdParty/RVC/infer_pack/*.py "$bundle/Contents/Resources/RVC/infer_pack/"
 clang++ -std=c++11 -O3 -target arm64-apple-macosx15.0 -dynamiclib -IThirdParty/WORLD/src \
     ThirdParty/WORLD/src/{harvest,common,fft,matlabfunctions}.cpp \
     -install_name @rpath/libWorldHarvest.dylib -o "$bundle/Contents/Frameworks/libWorldHarvest.dylib"
 codesign --force --sign - "$bundle/Contents/Frameworks/libWorldHarvest.dylib"
-seal="$(python3 scripts/voice_runtime_digest.py "$bundle/Contents")"
-mkdir -p build/voice-seals
-seal_file="$PWD/build/voice-seals/$seal"
-printf '%s' "$seal" > "$seal_file"
-swift build "${options[@]}" -c "$configuration" --product MetalVoice2 -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __mv_rvcseal -Xlinker "$seal_file"
+swift build "${options[@]}" -c "$configuration" --product MetalVoice2
 mkdir -p "$bundle/Contents/MacOS"
 cp -X "$binary_dir/MetalVoice2" "$bundle/Contents/MacOS/MetalVoice2"
 cp Resources/Info.plist "$bundle/Contents/Info.plist"

@@ -4,14 +4,17 @@ import os
 from pathlib import Path
 import resource
 import sys
-import sysconfig
+
 
 
 def confine(config):
     # macOS seatbelt parameters are data, including paths containing quotes.
     # Only system code and the installed runtime may supply executable mappings.
+    # -S on Python 3.11 leaves sys.prefix pointing to the base interpreter for a venv.
+    site = Path(sys.executable).parent.parent / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
     params = {
         "PYTHON": Path(sys.base_prefix).resolve(),
+        "SITE": site.resolve(),
         "CODE": Path(__file__).resolve().parent,
         "HARVEST": Path(__file__).resolve().parents[2] / "Frameworks/libWorldHarvest.dylib",
         "MODEL": Path(config["model"]).resolve(),
@@ -25,7 +28,7 @@ def confine(config):
 (allow sysctl-read file-read-metadata)
 (allow file-read* file-map-executable
     (subpath "/System/Library") (subpath "/usr/lib") (subpath "/Library/Apple")
-    (subpath (param "PYTHON")) (literal (param "HARVEST")))
+    (subpath (param "PYTHON")) (subpath (param "SITE")) (literal (param "HARVEST")))
 (allow file-read* (subpath (param "CODE")) (subpath "/usr/share")
     (literal "/dev/null") (literal "/dev/urandom") (literal "/dev/random")
     (literal (param "MODEL")) (literal (param "INDEX"))
@@ -45,6 +48,5 @@ def confine(config):
     if sandbox.sandbox_init_with_parameters(profile, 0, argv, ctypes.byref(error)) != 0:
         raise RuntimeError("Could not isolate the voice worker")
     # The app launches with -S. Add only this interpreter's own packages, without .pth hooks.
-    site = sysconfig.get_path("purelib")
-    if site not in sys.path:
-        sys.path.append(site)
+    if str(site) not in sys.path:
+        sys.path.append(str(site))
