@@ -1,3 +1,4 @@
+#include "RVCStream.hpp"
 #include "mv_audio.h"
 #include "Transport.hpp"
 #include "CaptureQueue.hpp"
@@ -24,7 +25,7 @@ static_assert(std::atomic<uint64_t>::is_always_lock_free);
 
 namespace {
 constexpr UInt32 maxFrames = 8192;
-constexpr size_t histogramSize = 5001; // 0.1 ms buckets through 500 ms.
+constexpr size_t histogramSize = 5001; // 0.1 ms buckets for cleanup, 1 ms with voice conversion.
 constexpr size_t computeHistogramSize = 1001; // 0.01 ms buckets, final bin >=10 ms.
 AudioObjectPropertyAddress addr(AudioObjectPropertySelector selector,
                                 AudioObjectPropertyScope scope = kAudioObjectPropertyScopeGlobal) {
@@ -133,6 +134,7 @@ struct MVEngine {
     double inputDeviceLatency = 0, outputDeviceLatency = 0;
     UInt32 inChannels = 0, selectedChannel = 0, outChannels = 0, inBuffer = 0, outBuffer = 0;
     mv::Transport transport;
+    mv::RVCStream voice;
     mv::CaptureQueue pendingCapture;
     int nsLevel = -1, enhancedMode = 0;
     bool preferCoreML = true, roomDereverb = false, echoCancellation = false;
@@ -154,6 +156,9 @@ struct MVEngine {
     std::array<float, maxFrames> mono{};
     struct Listener { AudioObjectID object; AudioObjectPropertyAddress address; };
     std::vector<Listener> listeners;
+    static constexpr AudioObjectPropertySelector inventoryProperties[] = {
+        kAudioHardwarePropertyDevices, kAudioHardwarePropertyDefaultInputDevice
+    };
     std::atomic<bool> running{false}, changed{false}, muted{false}, latencyValid{false};
     std::atomic<int32_t> lastError{0};
     std::atomic<uint64_t> captured{0}, rendered{0}, underruns{0}, resyncs{0}, latencyCount{0};
@@ -163,7 +168,7 @@ struct MVEngine {
 
     bool echoEnabled() const { return echoCancellation && enhancedMode != 4; }
     bool roomEnabled() const { return roomDereverb && enhancedMode != 4; }
-    bool processingEnabled() const { return echoEnabled() || roomEnabled() || nsLevel >= 0 || enhancedMode != 0; }
+    bool processingEnabled() const { return voice.enabled() || echoEnabled() || roomEnabled() || nsLevel >= 0 || enhancedMode != 0; }
 
     void processCapture(std::promise<bool> prepared) {
         pthread_setname_np("MetalVoice2 suppression");
@@ -183,6 +188,9 @@ struct MVEngine {
         deepFilterDevices = pipeline.computeDevices();
         dpdfDevices = pipeline.dpdfComputeDevices();
         localVQEThreads = pipeline.localVQEThreads();
+        const auto delayFrames = mv::NoisePipeline::delayFrames(nsLevel, enhancedMode, roomEnabled())
+            + (aec ? mv_aec_delay_frames() : 0);
+        const double cleanupDelayNS = delayFrames * 1e9 / inRate;
         prepared.set_value(true);
         std::array<float, 480> block{}, referenceLeft{}, referenceRight{};
         uint64_t previousDrops = 0, waitingSince = 0;
@@ -192,6 +200,7 @@ struct MVEngine {
             echoState = 3; lastError = MVErrorEchoReferenceUnavailable;
         };
         const auto reset = [&] {
+            if (voice.enabled()) { lastError = MVErrorVoiceStream; return false; }
             if (!pipeline.reset()) { lastError = kAudio_MemFullError; return false; }
             if (aec && mv_aec_reset(aec.get()) != 0) {
                 echoState = 3; lastError = MVErrorEchoProcessing; return false;
@@ -256,9 +265,11 @@ struct MVEngine {
                     double erle, delay; mv_aec_metrics(aec.get(), &erle, &delay);
                     echoERLE = erle; echoPathDelay = delay;
                 }
-                const auto delay = mv::NoisePipeline::delayFrames(nsLevel, enhancedMode, roomEnabled())
-                    + (aec ? mv_aec_delay_frames() : 0);
-                const double origin = hostNS > 0 ? hostNS - delay * 1e9 / inRate : 0;
+                double origin = hostNS > 0 ? hostNS - cleanupDelayNS : 0;
+                if (voice.enabled() && !voice.exchange(block.data(), origin, muted.load(std::memory_order_relaxed))) {
+                    lastError = MVErrorVoiceStream;
+                    return;
+                }
                 transport.push(block.data(), 480, origin);
             }
         }
@@ -276,7 +287,8 @@ struct MVEngine {
         auto &engine = *static_cast<MVEngine *>(context);
         if (object == kAudioObjectSystemObject) {
             for (UInt32 i = 0; i < count; ++i)
-                if (addresses[i].mSelector == kAudioHardwarePropertyDevices)
+                if (addresses[i].mSelector == kAudioHardwarePropertyDevices ||
+                    addresses[i].mSelector == kAudioHardwarePropertyDefaultInputDevice)
                     engine.deviceListGeneration.fetch_add(1, std::memory_order_relaxed);
         }
         engine.routeDirty.store(true, std::memory_order_release);
@@ -300,10 +312,11 @@ struct MVEngine {
         if (status != noErr) { e.lastError.store(status); return noErr; }
         const auto samples = static_cast<const float *>(e.captureList->mBuffers[e.selectedChannel].mData);
         if (!samples) { e.lastError.store(kAudioUnitErr_InvalidPropertyValue); return noErr; }
+        float peak = 0;
         if (*flags & kAudioUnitRenderAction_OutputIsSilence)
             std::fill_n(static_cast<float *>(e.captureList->mBuffers[e.selectedChannel].mData), count, 0.0f);
-        float peak = 0;
-        for (UInt32 i = 0; i < count; ++i) peak = std::max(peak, std::abs(samples[i]));
+        else
+            for (UInt32 i = 0; i < count; ++i) peak = std::max(peak, std::abs(samples[i]));
         e.inputPeak.store(peak, std::memory_order_relaxed);
         const double hostNS = time && (time->mFlags & kAudioTimeStampHostTimeValid)
             ? time->mHostTime * e.ticksToNS : 0;
@@ -338,21 +351,27 @@ struct MVEngine {
         bool validTime = info.valid && info.sourceHostNS > 0 && time && (time->mFlags & kAudioTimeStampHostTimeValid);
         if (validTime) {
             const double ms = (time->mHostTime * e.ticksToNS - info.sourceHostNS) / 1e6;
-            validTime = std::isfinite(ms) && ms >= 0 && ms < 500;
+            validTime = std::isfinite(ms) && ms >= 0 && ms < (e.voice.enabled() ? 5000 : 500);
             if (validTime) {
                 e.latency.store(ms, std::memory_order_relaxed);
                 e.maxLatency.store(std::max(ms, e.maxLatency.load(std::memory_order_relaxed)), std::memory_order_relaxed);
-                e.histogram[std::min(histogramSize - 1, size_t(ms * 10))].fetch_add(1, std::memory_order_relaxed);
+                e.histogram[std::min(histogramSize - 1, size_t(ms * (e.voice.enabled() ? 1 : 10)))].fetch_add(1, std::memory_order_relaxed);
                 e.latencyCount.fetch_add(1, std::memory_order_relaxed);
             }
         }
         e.latencyValid.store(validTime, std::memory_order_relaxed);
         const float wantedGain = e.muted.load(std::memory_order_relaxed) ? 0 : 1;
         float peak = 0;
-        for (UInt32 i = 0; i < count; ++i) {
-            e.gain += std::clamp(wantedGain - e.gain, -1.0f / 128, 1.0f / 128);
-            e.mono[i] *= e.gain;
-            peak = std::max(peak, std::abs(e.mono[i]));
+        if (e.gain != wantedGain) {
+            for (UInt32 i = 0; i < count; ++i) {
+                e.gain += std::clamp(wantedGain - e.gain, -1.0f / 128, 1.0f / 128);
+                e.mono[i] *= e.gain;
+                peak = std::max(peak, std::abs(e.mono[i]));
+            }
+        } else if (wantedGain == 0) {
+            std::fill_n(e.mono.data(), count, 0.0f);
+        } else {
+            for (UInt32 i = 0; i < count; ++i) peak = std::max(peak, std::abs(e.mono[i]));
         }
         for (UInt32 c = 0; c < data->mNumberBuffers; ++c) {
             auto &b = data->mBuffers[c];
@@ -378,11 +397,25 @@ struct MVEngine {
         workerStop.store(true, std::memory_order_release);
         if (workerWake != MACH_PORT_NULL) semaphore_signal(workerWake);
         if (worker.joinable()) worker.join();
+        voice.closeStream();
         playback.reset();
         if (workerWake != MACH_PORT_NULL) { semaphore_destroy(mach_task_self(), workerWake); workerWake = MACH_PORT_NULL; }
         latencyValid.store(false);
     }
-    ~MVEngine() { stop(); }
+    // Keep watching during startup, sleep and retries, even with both audio units closed.
+    MVEngine() {
+        for (auto key : inventoryProperties) {
+            auto address = addr(key);
+            AudioObjectAddPropertyListener(kAudioObjectSystemObject, &address, deviceEvent, this);
+        }
+    }
+    ~MVEngine() {
+        for (auto key : inventoryProperties) {
+            auto address = addr(key);
+            AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &address, deviceEvent, this);
+        }
+        stop();
+    }
 };
 
 extern "C" int mv_devices(MVDevice *devices, int capacity) {
@@ -411,6 +444,9 @@ extern "C" int mv_devices(MVDevice *devices, int capacity) {
     return count;
 }
 extern "C" MVEngine *mv_create() { return new MVEngine(); }
+extern "C" uint64_t mv_device_list_generation(const MVEngine *e) {
+    return e->deviceListGeneration.load(std::memory_order_relaxed);
+}
 extern "C" void mv_destroy(MVEngine *e) { delete e; }
 extern "C" void mv_stop(MVEngine *e) { if (e) e->stop(); }
 extern "C" void mv_set_muted(MVEngine *e, int muted) { if (e) e->muted.store(muted != 0); }
@@ -440,10 +476,23 @@ extern "C" int mv_set_deepfilter_acceleration(MVEngine *e, int enabled) {
     return 0;
 }
 
+extern "C" uint32_t mv_voice_speaker_count(const MVEngine *e) {
+    return e ? e->voice.speakerCount : 0;
+}
+
+extern "C" void mv_set_voice(MVEngine *e, const char *python, const char *script, const char *config, uint32_t chunk_ms) {
+    if (!e || e->input || e->output) return;
+    e->voice.python = python ? python : "";
+    e->voice.script = script ? script : "";
+    e->voice.config = config ? config : "";
+    e->voice.blocksPerChunk = std::max(1u, chunk_ms / 10);
+}
+
 extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32_t channel,
                           char *error, size_t errorCapacity) {
     if (!e) return MVStartFailed;
     e->stop();
+    e->voice.speakerCount = 0;
     int failureCode = MVStartFailed;
     try {
         if (inputID == outputID) throw std::runtime_error("Input and output must be different devices to avoid a feedback loop.");
@@ -469,7 +518,7 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
         if (!std::isfinite(e->inRate) || !std::isfinite(e->outRate) || e->inRate < 8000 || e->inRate > 192000 || e->outRate < 8000 || e->outRate > 192000)
             throw std::runtime_error("This baseline supports device rates from 8 to 192 kHz.");
         if (e->processingEnabled() && e->inRate != 48000)
-            throw std::runtime_error("Noise suppression currently requires a 48 kHz microphone. Set it to 48,000 Hz in Audio MIDI Setup, or turn Echo, Room de-reverb, WebRTC and Enhanced off.");
+            throw std::runtime_error("Microphone filters and voice conversion require a 48 kHz microphone. Set it to 48,000 Hz in Audio MIDI Setup.");
         e->referenceHeadroom = 0;
         e->echoState = e->echoEnabled() ? 1 : 0; e->echoERLE = -1; e->echoPathDelay = -1;
         if (e->echoEnabled()) {
@@ -507,6 +556,7 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
         e->latency = 0; e->maxLatency = 0; e->queue = 0; e->ppm = 0; e->inputPeak = 0; e->outputPeak = 0;
         e->lastError = 0; e->changed = false; e->gain = e->muted ? 0 : 1;
         e->deepFilterBackend = 0; e->deepFilterDevices = 0; e->dpdfDevices = 0; e->localVQEThreads = 0;
+        if (e->voice.enabled()) e->voice.start();
         e->pendingCapture.reset(e->inRate);
         e->nsBlocks = 0; e->nsNanos = 0; e->nsMaxNanos = 0;
         for (auto &bin : e->computeHistogram) bin = 0;
@@ -561,7 +611,6 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
             if (mv_playback_start(e->playback.get(), e->workerWake, message, sizeof(message)) != 0)
                 throw std::runtime_error(message);
         }
-        e->listen(kAudioObjectSystemObject, kAudioHardwarePropertyDevices);
         check(AudioOutputUnitStart(e->input), "Start microphone");
         check(AudioOutputUnitStart(e->output), "Start virtual output");
         e->routeDirty = true; // Also check events between taking snapshots and installing listeners.
@@ -577,19 +626,25 @@ extern "C" int mv_start(MVEngine *e, uint32_t inputID, uint32_t outputID, uint32
     return failureCode;
 }
 
+extern "C" MVMeterLevels mv_meter_levels(const MVEngine *e) {
+    return {e->inputPeak.load(std::memory_order_relaxed), e->outputPeak.load(std::memory_order_relaxed),
+            e->voice.displayRMS.load(std::memory_order_relaxed)};
+}
+
 extern "C" void mv_stats(MVEngine *e, MVStats *s) {
     if (!e || !s) return;
     *s = {};
     s->running = e->running; s->latency_valid = e->latencyValid;
     if (s->running && e->routeDirty.exchange(false, std::memory_order_acq_rel) && e->activeRouteChanged())
         e->changed = true;
-    s->device_list_generation = e->deviceListGeneration.load(std::memory_order_relaxed);
+    s->device_list_generation = mv_device_list_generation(e);
     s->device_changed = e->changed; s->last_error = e->lastError;
     s->input_rate = e->inRate; s->output_rate = e->outRate;
     s->input_buffer_frames = e->inBuffer; s->output_buffer_frames = e->outBuffer;
     s->queue_ms = e->queue; s->target_queue_ms = e->inRate ? e->transport.target() * 1000.0 / e->inRate : 0;
     s->latency_ms = e->latency; s->latency_max_ms = e->maxLatency; s->latency_samples = e->latencyCount;
     s->drift_ppm = e->ppm; s->input_peak = e->inputPeak; s->output_peak = e->outputPeak;
+    s->voice_input_rms = e->voice.inputRMS.load(std::memory_order_relaxed);
     s->input_device_latency_ms = e->inputDeviceLatency; s->output_device_latency_ms = e->outputDeviceLatency;
     s->input_frames = e->captured; s->output_frames = e->rendered;
     s->underruns = e->underruns; s->overruns = e->transport.overruns() + e->pendingCapture.overruns(); s->resyncs = e->resyncs;
@@ -629,10 +684,17 @@ extern "C" void mv_stats(MVEngine *e, MVStats *s) {
             break;
         }
     }
-    uint64_t total = 0; bool found50 = false, found95 = false;
+    uint64_t total = 0;
+    const auto rank50 = uint64_t(std::ceil(s->latency_samples * 0.50));
+    const auto rank95 = uint64_t(std::ceil(s->latency_samples * 0.95));
+    const int binsPerMS = e->voice.enabled() ? 1 : 10;
     for (size_t i = 0; i < histogramSize && s->latency_samples; ++i) {
+        const auto previous = total;
         total += e->histogram[i].load(std::memory_order_relaxed);
-        if (!found50 && total >= uint64_t(std::ceil(s->latency_samples * 0.50))) { s->latency_p50_ms = (i + 0.5) / 10; found50 = true; }
-        if (!found95 && total >= uint64_t(std::ceil(s->latency_samples * 0.95))) { s->latency_p95_ms = (i + 0.5) / 10; found95 = true; }
+        if (previous < rank50 && total >= rank50) s->latency_p50_ms = (i + 0.5) / binsPerMS;
+        if (total >= rank95) {
+            s->latency_p95_ms = (i + 0.5) / binsPerMS;
+            break;
+        }
     }
 }

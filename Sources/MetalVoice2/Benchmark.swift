@@ -13,7 +13,7 @@ func runBenchmark(arguments: [String]) -> Int32 {
         return 2
     }
     guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
-        fputs("Microphone access has not been granted. Open MetalVoice2.app, press Start, and allow microphone access first.\n", stderr)
+        fputs("Microphone access has not been granted. Open MetalVoice2.app, enable the Microphone tab, and allow microphone access first.\n", stderr)
         return 3
     }
     if NSRunningApplication.runningApplications(withBundleIdentifier: "app.metalvoice2.baseline")
@@ -25,7 +25,7 @@ func runBenchmark(arguments: [String]) -> Int32 {
         guard let i = arguments.firstIndex(of: name), i + 1 < arguments.count else { return nil }
         return arguments[i + 1]
     }
-    let devices = AudioDevice.list()
+    let devices = AudioDevice.list() ?? []
     let inputUID = option("--input-uid"), outputUID = option("--output-uid")
     guard let input = devices.first(where: { $0.inputs > 0 && !$0.isVirtual && (inputUID != nil ? $0.uid == inputUID : $0.isDefaultInput) }),
           let output = devices.first(where: { $0.outputs > 0 && $0.isVirtual && (outputUID != nil ? $0.uid == outputUID : $0.name.localizedCaseInsensitiveContains("BlackHole 2ch")) }) else {

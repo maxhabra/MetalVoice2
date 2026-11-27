@@ -16,7 +16,7 @@ typedef struct {
 typedef struct {
     int running, latency_valid, device_changed;
     int32_t last_error;
-    uint64_t device_list_generation; // Changes to device inventory, including unrelated devices.
+    uint64_t device_list_generation; // Changes to the device inventory or default microphone.
     double input_rate, output_rate, queue_ms, target_queue_ms;
     double latency_ms, latency_p50_ms, latency_p95_ms, latency_max_ms;
     double drift_ppm, input_peak, output_peak;
@@ -40,10 +40,11 @@ typedef struct {
     uint64_t echo_reference_frames, echo_reference_drops;
     char echo_reference_device[256];
     double localvqe_delay_ms;
+    double voice_input_rms; // Post-cleanup RMS of the most recent complete RVC chunk.
     uint32_t localvqe_threads; // GGML CPU worker count; zero while inactive
 } MVStats;
 
-enum { MVErrorEchoReferenceUnavailable = -100001, MVErrorEchoProcessing = -100002 };
+enum { MVErrorEchoReferenceUnavailable = -100001, MVErrorEchoProcessing = -100002, MVErrorVoiceStream = -100003 };
 
 // Start results distinguish a device becoming available from configuration/permission failures.
 enum { MVStartOK = 0, MVStartFailed = -1, MVStartDeviceNotReady = -2 };
@@ -51,10 +52,13 @@ enum { MVStartOK = 0, MVStartFailed = -1, MVStartDeviceNotReady = -2 };
 // Control-thread API. Enumeration and lifecycle functions are never callback-safe.
 int mv_devices(MVDevice *devices, int capacity);
 MVEngine *mv_create(void);
+uint64_t mv_device_list_generation(const MVEngine *engine);
 void mv_destroy(MVEngine *engine);
 int mv_start(MVEngine *engine, uint32_t input, uint32_t output, uint32_t channel,
              char *error, size_t error_capacity);
 void mv_stop(MVEngine *engine);
+uint32_t mv_voice_speaker_count(const MVEngine *engine);
+void mv_set_voice(MVEngine *engine, const char *python, const char *script, const char *config, uint32_t chunk_ms);
 void mv_set_muted(MVEngine *engine, int muted);
 // Configure only while stopped. Returns -1 if running or level is outside -1..3.
 int mv_set_noise_suppression(MVEngine *engine, int level);
@@ -68,6 +72,9 @@ int mv_set_echo_cancellation(MVEngine *engine, int enabled);
 int mv_set_room_dereverb(MVEngine *engine, int enabled);
 // Default is 1: Core ML automatic, with native fallback if loading fails.
 int mv_set_deepfilter_acceleration(MVEngine *engine, int enabled);
+// Lock-free panel read, independent of transport diagnostics.
+typedef struct { double input_peak, output_peak, voice_rms; } MVMeterLevels;
+MVMeterLevels mv_meter_levels(const MVEngine *engine);
 void mv_stats(MVEngine *engine, MVStats *stats);
 
 #ifdef __cplusplus

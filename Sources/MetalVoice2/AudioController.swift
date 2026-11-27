@@ -2,7 +2,8 @@ import AppKit
 import AVFoundation
 import AudioCore
 
-let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"
+let appVersion = Bundle.main.object(forInfoDictionaryKey: "MVReleaseVersion") as? String
+    ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"
 
 enum EnhancedSuppression: String, CaseIterable {
     case off, rnnoise, deepFilterNet3 = "deepfilternet3", dpdfNet2 = "dpdfnet2", localVQE = "localvqe"
@@ -59,23 +60,14 @@ func dpdfEngineLabel(_ stats: MVStats) -> String {
     return devices.isEmpty ? "Core ML · automatic" : "Core ML · \(devices.joined(separator: " + "))"
 }
 
-struct AudioDevice: Identifiable {
-    let id: UInt32
-    let uid: String
-    let name: String
-    let inputs: Int
-    let outputs: Int
-    let sampleRate: Double
-    let bufferFrames: UInt32
-    let isVirtual: Bool
-    let isDefaultInput: Bool
-
-    static func list() -> [AudioDevice] {
+extension AudioDevice {
+    static func list() -> [AudioDevice]? {
         let count = mv_devices(nil, 0)
-        guard count > 0 else { return [] }
+        guard count >= 0 else { return nil }
+        if count == 0 { return [] }
         var devices = [MVDevice](repeating: MVDevice(), count: Int(count) + 16)
         let found = mv_devices(&devices, Int32(devices.count))
-        guard found > 0 else { return [] }
+        guard found >= 0 else { return nil }
         return devices.prefix(Int(found)).filter { $0.alive != 0 }.map {
             AudioDevice(id: $0.id, uid: nativeString($0.uid), name: nativeString($0.name),
                         inputs: Int($0.input_channels), outputs: Int($0.output_channels),
@@ -87,6 +79,13 @@ struct AudioDevice: Identifiable {
 
 // All engine lifecycle/statistics calls use one control queue. Audio callbacks live in C++.
 final class AudioController: ObservableObject {
+    let voices = VoiceLibrary()
+    @Published private(set) var cleanupEnabled = false
+    @Published private(set) var voiceEnabled = false
+    @Published var voiceOnLaunch = UserDefaults.standard.bool(forKey: "rvcOnLaunch") {
+        didSet { UserDefaults.standard.set(voiceOnLaunch, forKey: "rvcOnLaunch") }
+    }
+    @Published private(set) var activeVoicePreset: VoicePreset?
     @Published var devices: [AudioDevice] = []
     @Published var inputUID = ""
     @Published var outputUID = ""
@@ -102,7 +101,6 @@ final class AudioController: ObservableObject {
     @Published var enableOnLaunch = UserDefaults.standard.bool(forKey: "enableOnLaunch") {
         didSet { UserDefaults.standard.set(enableOnLaunch, forKey: "enableOnLaunch") }
     }
-    @Published var panelContentHeight: CGFloat = 324
     @Published private(set) var echoCancellation = false
     @Published private(set) var roomDereverb = false
     @Published private(set) var noiseSuppression = false
@@ -111,26 +109,31 @@ final class AudioController: ObservableObject {
     @Published private var recovery = DeviceRecovery()
     var wantedRunning: Bool { recovery.requested }
 
-    var inputs: [AudioDevice] { devices.filter { $0.inputs > 0 && !$0.isVirtual } }
+    var inputs: [AudioDevice] { devices.filter(\.isMicrophone) }
     var outputs: [AudioDevice] { devices.filter { $0.outputs > 0 && $0.isVirtual } }
     var selectedInput: AudioDevice? { inputs.first { $0.uid == inputUID } }
     var selectedOutput: AudioDevice? { outputs.first { $0.uid == outputUID } }
-    var canStart: Bool { selectedInput != nil && selectedOutput != nil && !busy }
+    var hasVoice: Bool { voiceEnabled && voices.selected != nil }
+    private var needsStream: Bool { cleanupEnabled || hasVoice }
+    var canChooseRoute: Bool { needsStream && !busy }
     var suppressionSupported: Bool { selectedInput?.sampleRate == 48000 }
     var webRTCSelection: Int { noiseSuppression ? suppressionLevel : -1 }
+    var activeWebRTCLevel: Int { cleanupEnabled ? webRTCSelection : -1 }
+    var activeEnhanced: EnhancedSuppression { cleanupEnabled ? enhancedSuppression : .off }
     var separateRoomControlsAvailable: Bool { enhancedSuppression != .localVQE }
-    var effectiveEchoCancellation: Bool { echoCancellation && separateRoomControlsAvailable }
-    var effectiveRoomDereverb: Bool { roomDereverb && separateRoomControlsAvailable }
-    var processingEnabled: Bool { effectiveEchoCancellation || effectiveRoomDereverb || noiseSuppression || enhancedSuppression != .off }
+    var effectiveEchoCancellation: Bool { cleanupEnabled && echoCancellation && separateRoomControlsAvailable }
+    var effectiveRoomDereverb: Bool { cleanupEnabled && roomDereverb && separateRoomControlsAvailable }
+    var processingEnabled: Bool { effectiveEchoCancellation || effectiveRoomDereverb || activeWebRTCLevel >= 0 || activeEnhanced != .off }
     var processingLabel: String {
         let stages = (effectiveEchoCancellation ? ["Echo (AEC3)"] : []) + (effectiveRoomDereverb ? ["Room de-reverb"] : [])
-            + (noiseSuppression ? ["WebRTC"] : []) + (enhancedSuppression != .off ? [enhancedSuppression.label] : [])
+            + (activeWebRTCLevel >= 0 ? ["WebRTC"] : []) + (activeEnhanced != .off ? [activeEnhanced.label] : [])
         return stages.isEmpty ? "Pass-through · suppression off" : stages.joined(separator: " + ")
     }
     private var activeStatus: String {
         if muted { return "Muted" }
-        if effectiveEchoCancellation { return effectiveRoomDereverb || noiseSuppression || enhancedSuppression != .off ? "Reducing echo + noise" : "Reducing speaker echo" }
-        if effectiveRoomDereverb || enhancedSuppression == .localVQE { return "Reducing noise + room reverb" }
+        if hasVoice { return "Converting voice" }
+        if effectiveEchoCancellation { return effectiveRoomDereverb || activeWebRTCLevel >= 0 || activeEnhanced != .off ? "Reducing echo + noise" : "Reducing speaker echo" }
+        if effectiveRoomDereverb || activeEnhanced == .localVQE { return "Reducing noise + room reverb" }
         return processingEnabled ? "Reducing background noise" : "Passing microphone audio"
     }
     var echoReferenceStatus: String {
@@ -147,8 +150,11 @@ final class AudioController: ObservableObject {
     private var timer: Timer?
     private var sleeping = false
     private var generation = 0
+    private var voicePython: String?
+    private var preparingVoice = false
     private var pollPending = false
-    private var inventoryGeneration: UInt64 = 0
+    private var inventoryGeneration: UInt64?
+    private var previousDefaultUID = UserDefaults.standard.string(forKey: "lastDefaultInputUID")
     private var unchangedPolls = 0
     private var lastFrames: UInt64 = 0
     private var lastOutputFrames: UInt64 = 0
@@ -156,6 +162,8 @@ final class AudioController: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
+        voiceEnabled = voiceOnLaunch && voices.selected != nil
+        cleanupEnabled = enableOnLaunch
         inputUID = defaults.string(forKey: "inputUID") ?? ""
         outputUID = defaults.string(forKey: "outputUID") ?? ""
         channel = defaults.integer(forKey: "inputChannel")
@@ -165,7 +173,6 @@ final class AudioController: ObservableObject {
         suppressionLevel = min(3, max(0, defaults.object(forKey: "suppressionLevel") as? Int ?? 1))
         enhancedSuppression = EnhancedSuppression(rawValue: defaults.string(forKey: "enhancedSuppression") ?? "off") ?? .off
         refreshDevices()
-        if let input = selectedInput { channel = max(0, min(channel, input.inputs - 1)) }
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.poll() }
         let center = NSWorkspace.shared.notificationCenter
         observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
@@ -189,10 +196,37 @@ final class AudioController: ObservableObject {
         control.sync { mv_destroy(engine) }
     }
 
+    func meterLevels() -> MVMeterLevels { mv_meter_levels(engine) }
+
     func refreshDevices() {
-        devices = AudioDevice.list()
-        if inputUID.isEmpty {
-            inputUID = inputs.first(where: \.isDefaultInput)?.uid ?? inputs.first?.uid ?? ""
+        // Read the generation first so a change during enumeration triggers another refresh.
+        let generation = mv_device_list_generation(engine)
+        guard let available = AudioDevice.list() else {
+            inventoryGeneration = nil
+            return
+        }
+        applyDevices(available, generation: generation)
+    }
+
+    private func applyDevices(_ available: [AudioDevice], generation: UInt64) {
+        let microphone = AudioDevice.microphone(in: available, selectedUID: inputUID, previousDefaultUID: previousDefaultUID)
+        let reportedDefault = available.first(where: \.isDefaultInput)
+        // HAL can announce a default before it publishes that microphone's channels.
+        let defaultPending = reportedDefault.map { !$0.isVirtual && !$0.isMicrophone } ?? false
+        inventoryGeneration = defaultPending ? nil : generation
+        let defaultUID = reportedDefault?.uid ?? ""
+        if devices != available { devices = available }
+        if let microphone {
+            let nextChannel = microphone.uid == inputUID ? min(max(0, channel), microphone.inputs - 1) : 0
+            if microphone.uid != inputUID || nextChannel != channel {
+                inputUID = microphone.uid
+                channel = nextChannel
+                saveSelection()
+            }
+        }
+        if !defaultPending && previousDefaultUID != defaultUID {
+            previousDefaultUID = defaultUID
+            UserDefaults.standard.set(defaultUID, forKey: "lastDefaultInputUID")
         }
         if outputUID.isEmpty {
             outputUID = outputs.first(where: { $0.name.localizedCaseInsensitiveContains("BlackHole 2ch") })?.uid
@@ -200,8 +234,25 @@ final class AudioController: ObservableObject {
         }
     }
 
-    func chooseInput(_ uid: String) { inputUID = uid; channel = 0; saveSelection() }
-    func chooseOutput(_ uid: String) { outputUID = uid; saveSelection() }
+    func chooseInput(_ uid: String) {
+        guard canChooseRoute, uid != inputUID else { return }
+        inputUID = uid
+        channel = 0
+        saveSelection()
+        updateStream()
+    }
+    func chooseOutput(_ uid: String) {
+        guard canChooseRoute, uid != outputUID else { return }
+        outputUID = uid
+        saveSelection()
+        updateStream()
+    }
+    func chooseChannel(_ index: Int) {
+        guard canChooseRoute, index != channel, (0..<(selectedInput?.inputs ?? 0)).contains(index) else { return }
+        channel = index
+        saveSelection()
+        updateStream()
+    }
     func saveSelection() {
         UserDefaults.standard.set(inputUID, forKey: "inputUID")
         UserDefaults.standard.set(outputUID, forKey: "outputUID")
@@ -217,39 +268,98 @@ final class AudioController: ObservableObject {
         if selection >= 0 { suppressionLevel = selection }
         UserDefaults.standard.set(noiseSuppression, forKey: "noiseSuppression")
         UserDefaults.standard.set(suppressionLevel, forKey: "suppressionLevel")
-        applySuppressionChange()
+        if cleanupEnabled { updateStream() }
     }
 
     func setEchoCancellation(_ enabled: Bool) {
         guard separateRoomControlsAvailable, enabled != echoCancellation, !busy, !enabled || suppressionSupported else { return }
         echoCancellation = enabled
         UserDefaults.standard.set(enabled, forKey: "echoCancellation")
-        applySuppressionChange()
+        if cleanupEnabled { updateStream() }
     }
 
     func setRoomDereverb(_ enabled: Bool) {
         guard separateRoomControlsAvailable, enabled != roomDereverb, !busy, !enabled || suppressionSupported else { return }
         roomDereverb = enabled
         UserDefaults.standard.set(enabled, forKey: "roomDereverb")
-        applySuppressionChange()
+        if cleanupEnabled { updateStream() }
     }
 
     func setEnhancedSuppression(_ mode: EnhancedSuppression) {
         guard mode != enhancedSuppression, !busy, mode == .off || suppressionSupported else { return }
         enhancedSuppression = mode
         UserDefaults.standard.set(mode.rawValue, forKey: "enhancedSuppression")
-        applySuppressionChange()
+        if cleanupEnabled { updateStream() }
     }
 
-    private func applySuppressionChange() {
-        guard running, !busy else { return }
+    func setCleanupEnabled(_ enabled: Bool) {
+        guard !busy, enabled != cleanupEnabled else { return }
+        cleanupEnabled = enabled
+        updateStream(reconfigure: webRTCSelection >= 0 || enhancedSuppression != .off || echoCancellation || roomDereverb)
+    }
+
+    func setVoiceEnabled(_ enabled: Bool) {
+        guard !busy, voiceEnabled != enabled else { return }
+        voiceEnabled = enabled
+        updateStream(reconfigure: voices.selected != nil)
+    }
+
+    func reloadVoice() {
+        if voiceEnabled { updateStream() }
+    }
+
+    // Leave an active microphone route running while first-use voice dependencies download.
+    private func waitingForVoice(_ launch: VoiceLaunch) -> Bool {
+        if let voicePython, FileManager.default.isExecutableFile(atPath: voicePython) { return false }
+        guard !preparingVoice else { return true }
+        preparingVoice = true
+        status = "Preparing voice components…"
+        let script = URL(fileURLWithPath: launch.worker).deletingLastPathComponent().appendingPathComponent("prepare_voice.sh")
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("MetalVoice2/RVC")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = Result { try VoiceRuntime.prepare(in: support, using: script) }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.preparingVoice = false
+                switch result {
+                case .success(let python):
+                    self.voicePython = python
+                    if self.hasVoice && !self.sleeping { self.updateStream() }
+                case .failure(let error):
+                    guard self.hasVoice else { return }
+                    self.voiceEnabled = false
+                    if !self.cleanupEnabled { self.recovery.cancel() }
+                    else if !self.running && !self.sleeping { self.updateStream() }
+                    self.error = error.localizedDescription
+                    if !self.running && !self.busy { self.status = "Voice unavailable" }
+                }
+            }
+        }
+        return true
+    }
+
+    private func updateStream(reconfigure: Bool = true) {
+        guard !busy else { return }
+        error = nil
+        guard needsStream else {
+            if running || wantedRunning { stop() }
+            else { status = "Stopped" }
+            return
+        }
+        if !running {
+            start()
+            return
+        }
+        guard reconfigure else { return }
+        if hasVoice, let launch = try? VoiceLaunch(voice: voices.selected), waitingForVoice(launch) { return }
         // Reconfigure off the callbacks. Brief silence avoids mixing raw and
         // filtered audio with different algorithmic delay during a switch.
         stop(preserveIntent: true, restartImmediately: true)
     }
 
     func start() {
-        guard !busy, !running else { return }
+        guard needsStream, !busy, !running else { return }
         recovery.request()
         error = nil
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
@@ -270,24 +380,53 @@ final class AudioController: ObservableObject {
 
     private func permissionDenied() {
         recovery.cancel(); status = "Microphone permission needed"
-        error = "Allow MetalVoice2 in System Settings → Privacy & Security → Microphone, then press Start."
+        error = "Allow MetalVoice2 in System Settings → Privacy & Security → Microphone, then turn Enable off and on."
     }
 
     private func startAuthorized() {
         guard !sleeping else { return }
         refreshDevices()
-        guard let input = selectedInput, let output = selectedOutput, (0..<input.inputs).contains(channel) else {
-            status = "Waiting for selected devices"
-            error = outputs.isEmpty ? "No virtual output found. Install or enable BlackHole, then Refresh devices."
-                : "Reconnect the selected devices, or choose another microphone and virtual output."
+        guard let input = selectedInput else {
+            status = "Waiting for a microphone"
+            error = nil
             recovery.waitForDevice()
             return
         }
+        guard let output = selectedOutput else {
+            status = "Waiting for virtual output"
+            error = outputs.isEmpty ? "Install or enable a virtual output such as BlackHole."
+                : "Reconnect the selected virtual output, or choose another one."
+            recovery.waitForDevice()
+            return
+        }
+        if (processingEnabled || hasVoice) && input.sampleRate != 48000 {
+            status = "Waiting for a 48 kHz microphone"
+            error = "Set \(input.name) to 48,000 Hz in Audio MIDI Setup, or choose another microphone."
+            recovery.waitForDevice()
+            return
+        }
+        error = nil
         saveSelection()
-        busy = true; status = "Starting…"; generation += 1
+        var launch: VoiceLaunch?
+        if hasVoice {
+            do {
+                let selected = try VoiceLaunch(voice: voices.selected)
+                if waitingForVoice(selected) { return }
+                launch = selected
+            }
+            catch {
+                recovery.cancel()
+                status = "Voice unavailable"
+                self.error = error.localizedDescription
+                return
+            }
+        }
+        let model = voices.selected?.model
+        let voice = launch, python = launch == nil ? nil : voicePython, preset = hasVoice ? voices.selected?.preset : nil
+        busy = true; status = hasVoice ? "Loading voice…" : "Starting…"; generation += 1
         let token = generation, selectedChannel = UInt32(channel), muted = self.muted
-        let nsLevel = noiseSuppression ? Int32(suppressionLevel) : -1
-        let enhancedMode = enhancedSuppression.nativeMode
+        let nsLevel = Int32(activeWebRTCLevel)
+        let enhancedMode = activeEnhanced.nativeMode
         let dereverb = effectiveRoomDereverb, echo = effectiveEchoCancellation
         control.async { [weak self] in
             guard let self else { return }
@@ -297,11 +436,15 @@ final class AudioController: ObservableObject {
             mv_set_room_dereverb(self.engine, dereverb ? 1 : 0)
             mv_set_enhanced_suppression(self.engine, enhancedMode)
             var message = [CChar](repeating: 0, count: 1024)
+            mv_set_voice(self.engine, python, voice?.worker, voice?.config, UInt32(preset?.chunk ?? 0))
             let result = mv_start(self.engine, input.id, output.id, selectedChannel, &message, message.count)
+            let speakerCount = Int(mv_voice_speaker_count(self.engine))
             let failure = String(cString: message)
             DispatchQueue.main.async {
                 guard token == self.generation else { return }
                 self.busy = false
+                if let model { self.voices.setSpeakerCount(speakerCount, for: model) }
+                self.activeVoicePreset = result == 0 ? preset : nil
                 self.running = result == 0
                 self.status = result == 0 ? self.activeStatus : "Could not start"
                 self.error = result == 0 ? nil : failure
@@ -408,6 +551,13 @@ final class AudioController: ObservableObject {
     private func poll() {
         guard !busy, !sleeping, !pollPending else { return }
         if !running {
+            if mv_device_list_generation(engine) != inventoryGeneration {
+                let previousInput = selectedInput, previousOutput = selectedOutput
+                refreshDevices()
+                if wantedRunning && (previousInput != selectedInput || previousOutput != selectedOutput) {
+                    recovery.retryAt = .distantPast
+                }
+            }
             if recovery.shouldRetry() { start() }
             return
         }
@@ -421,24 +571,33 @@ final class AudioController: ObservableObject {
             DispatchQueue.main.async {
                 self.pollPending = false
                 guard token == self.generation else { return }
+                let inputUID = self.inputUID, channel = self.channel
                 if let inventory {
-                    self.devices = inventory
-                    self.inventoryGeneration = snapshot.device_list_generation
+                    self.applyDevices(inventory, generation: snapshot.device_list_generation)
+                }
+                if snapshot.device_changed != 0 || inputUID != self.inputUID || channel != self.channel {
+                    self.stop(preserveIntent: true, restartImmediately: true)
+                    return
                 }
                 if snapshot.input_frames == self.lastFrames || snapshot.output_frames == self.lastOutputFrames {
                     self.unchangedPolls += 1
                 } else { self.unchangedPolls = 0 }
                 self.lastFrames = snapshot.input_frames
                 self.lastOutputFrames = snapshot.output_frames
-                if snapshot.device_changed == 0 && (snapshot.last_error == MVErrorEchoReferenceUnavailable || snapshot.last_error == MVErrorEchoProcessing) {
-                    self.error = snapshot.last_error == MVErrorEchoReferenceUnavailable
-                        ? "Echo lost its playback reference. Check System Audio Recording permission and the macOS sound output, then press Start. Your calling app must play through that output."
-                        : "Echo processing failed. Press Start to retry, or turn Echo off."
+                if snapshot.last_error == MVErrorVoiceStream {
+                    self.error = "Voice conversion stopped after a gap or missed deadline. Try a larger Chunk or shorter Extra history, then apply the settings."
                     self.stop()
                     return
                 }
-                if snapshot.device_changed != 0 || snapshot.last_error != 0 || self.unchangedPolls >= 4 {
-                    self.error = snapshot.device_changed != 0 || snapshot.last_error == 0 ? "Audio route changed; reconnecting selected devices."
+                if snapshot.last_error == MVErrorEchoReferenceUnavailable || snapshot.last_error == MVErrorEchoProcessing {
+                    self.error = snapshot.last_error == MVErrorEchoReferenceUnavailable
+                        ? "Echo lost its playback reference. Check System Audio Recording permission and the macOS sound output, then turn Enable off and on. Your calling app must play through that output."
+                        : "Echo processing failed. Toggle Echo to retry or leave it off."
+                    self.stop()
+                    return
+                }
+                if snapshot.last_error != 0 || self.unchangedPolls >= 4 {
+                    self.error = snapshot.last_error == 0 ? "Audio stalled. Reconnecting…"
                         : "Core Audio error \(snapshot.last_error); reconnecting."
                     self.recovery.retryAt = Date().addingTimeInterval(1)
                     self.stop(preserveIntent: true)

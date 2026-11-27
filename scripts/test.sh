@@ -3,6 +3,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build/module-cache
 export CLANG_MODULE_CACHE_PATH="$PWD/build/module-cache"
+swiftc -module-cache-path build/module-cache Sources/MetalVoice2/VoiceLibrary.swift Tests/VoiceLibrary/main.swift -o build/voice-library-tests
+build/voice-library-tests
+voice_python="${METALVOICE_TEST_PYTHON:-$HOME/Library/Application Support/MetalVoice2/RVC/engine-1/bin/python3.11}"
+if [[ -x "$voice_python" ]]; then
+    "$voice_python" -IB Tests/VoiceGate/test_gate.py
+    "$voice_python" -IB Tests/VoiceSecurity/test_index.py
+    "$voice_python" -IB Tests/VoiceSecurity/test_isolation.py
+fi
 python3 scripts/verify_webrtc.py
 python3 scripts/verify_rnnoise.py
 python3 scripts/verify_room.py
@@ -25,7 +33,7 @@ swift build "${options[@]}" -c release --product transport-tests
 clang++ -std=c++20 -dynamiclib Tests/RouteFixture/HAL.cpp -framework AudioToolbox -framework CoreAudio \
     -framework CoreFoundation -o build/libRouteFixture.dylib
 DYLD_INSERT_LIBRARIES="$PWD/build/libRouteFixture.dylib" "$binary_dir/transport-tests" --route-fixture
-swiftc -module-cache-path build/module-cache -I Sources/AudioCore/include Sources/MetalVoice2/DeviceRecovery.swift \
+swiftc -module-cache-path build/module-cache -I Sources/AudioCore/include Sources/MetalVoice2/{AudioDevice,DeviceRecovery}.swift \
     Tests/DeviceRecovery/main.swift -o build/device-recovery-tests
 build/device-recovery-tests
 swift build "${options[@]}" -c release --product noise-tests

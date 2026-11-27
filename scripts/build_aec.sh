@@ -8,9 +8,9 @@ if [[ ! -x build/aec-env/bin/meson || ! -x build/aec-env/bin/ninja ]]; then
 fi
 export PATH="$PWD/build/aec-env/bin:$PATH"
 export MACOSX_DEPLOYMENT_TARGET=15.0
-options=()
+options=(setup)
 if [[ -f build/aec-native/meson-private/coredata.dat ]]; then options+=(--reconfigure); fi
-CC=clang CXX=clang++ meson setup "${options[@]}" build/aec-native ThirdParty/WebRTCAEC/webrtc-audio-processing-2.1 \
+CC=clang CXX=clang++ meson "${options[@]}" build/aec-native ThirdParty/WebRTCAEC/webrtc-audio-processing-2.1 \
     --buildtype=release --default-library=static --wrap-mode=nodownload --force-fallback-for=abseil-cpp \
     -Dc_args=-mmacosx-version-min=15.0 -Dcpp_args=-mmacosx-version-min=15.0
 meson compile -C build/aec-native -j6
