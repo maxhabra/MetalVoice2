@@ -99,11 +99,14 @@ struct MenuView: View {
                                 launchHelp: "Start audio with microphone cleanup when MetalVoice2 opens.")
             Spacer()
         }.disabled(audio.busy)
-        microphoneSettings.disabled(!audio.cleanupEnabled || audio.busy)
+        routingControls.disabled(!audio.canChooseRoute)
+            .opacity(audio.canChooseRoute ? 1 : 0.6)
+        Divider()
+        cleanupSettings.disabled(!audio.cleanupEnabled || audio.busy)
             .opacity(audio.cleanupEnabled ? 1 : 0.6)
     }
 
-    @ViewBuilder private var microphoneSettings: some View {
+    @ViewBuilder private var routingControls: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Microphone input").panelHelp("Physical microphone to capture.").font(.caption).foregroundStyle(.secondary)
@@ -137,7 +140,9 @@ struct MenuView: View {
             Text("Select a virtual device such as BlackHole to send audio to your calling app.")
                 .font(.caption).foregroundStyle(.secondary)
         }
-        Divider()
+    }
+
+    @ViewBuilder private var cleanupSettings: some View {
         HStack(spacing: 20) {
             Toggle("Echo", isOn: Binding(get: { audio.echoCancellation && audio.separateRoomControlsAvailable }, set: audio.setEchoCancellation))
                 .toggleStyle(.checkbox)

@@ -115,6 +115,7 @@ final class AudioController: ObservableObject {
     var selectedOutput: AudioDevice? { outputs.first { $0.uid == outputUID } }
     var hasVoice: Bool { voiceEnabled && voices.selected != nil }
     private var needsStream: Bool { cleanupEnabled || hasVoice }
+    var canChooseRoute: Bool { needsStream && !busy }
     var suppressionSupported: Bool { selectedInput?.sampleRate == 48000 }
     var webRTCSelection: Int { noiseSuppression ? suppressionLevel : -1 }
     var activeWebRTCLevel: Int { cleanupEnabled ? webRTCSelection : -1 }
@@ -232,20 +233,20 @@ final class AudioController: ObservableObject {
     }
 
     func chooseInput(_ uid: String) {
-        guard cleanupEnabled, !busy, uid != inputUID else { return }
+        guard canChooseRoute, uid != inputUID else { return }
         inputUID = uid
         channel = 0
         saveSelection()
         updateStream()
     }
     func chooseOutput(_ uid: String) {
-        guard cleanupEnabled, !busy, uid != outputUID else { return }
+        guard canChooseRoute, uid != outputUID else { return }
         outputUID = uid
         saveSelection()
         updateStream()
     }
     func chooseChannel(_ index: Int) {
-        guard cleanupEnabled, !busy, index != channel, (0..<(selectedInput?.inputs ?? 0)).contains(index) else { return }
+        guard canChooseRoute, index != channel, (0..<(selectedInput?.inputs ?? 0)).contains(index) else { return }
         channel = index
         saveSelection()
         updateStream()
